@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mersenne Twister 1998 · Interactive Close Reading</title>
+<style>
+  :root{
+    --bg:#0b0f14; --card:#11161d; --card2:#0d1219; --line:#1f2733;
+    --tx:#d8dee6; --mut:#8b98a5; --acc:#4da3ff; --ok:#3fb950; --warn:#f0b429; --bad:#f85149;
+    --mono:ui-monospace,Consolas,"Cascadia Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.75;font-size:15px}
+  a{color:var(--acc);text-decoration:none}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 20px 80px}
+  header.hero{padding:46px 0 10px}
+  .hero h1{font-size:27px;margin:0 0 6px}
+  .hero .sub{color:var(--mut)}
+  .cite{font-size:13px;color:var(--mut);font-family:var(--mono)}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 6px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:150px}
+  .stat b{display:block;font-size:17px;color:var(--acc);font-family:var(--mono)}
+  .stat span{font-size:12px;color:var(--mut)}
+  nav.toc{position:sticky;top:0;z-index:50;background:rgba(11,15,20,.92);
+    border-bottom:1px solid var(--line);margin:14px -20px 0;padding:9px 20px;display:flex;gap:6px;flex-wrap:wrap}
+  nav.toc a{font-size:12.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--mut)}
+  nav.toc a:hover{color:var(--tx);border-color:var(--acc)}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:26px 28px;margin:26px 0;scroll-margin-top:64px}
+  .tag{display:inline-block;font-size:11.5px;font-family:var(--mono);color:var(--warn);
+    border:1px solid #3d3417;background:#1d1a10;border-radius:999px;padding:1px 10px;margin-bottom:8px}
+  h2{font-size:20px;margin:2px 0 4px}
+  .lead{color:var(--mut);margin-top:2px}
+  h3{font-size:15.5px;margin:26px 0 8px;color:var(--acc)}
+  p{margin:10px 0}
+  code{font-family:var(--mono);background:#1a2230;border-radius:5px;padding:1px 6px;font-size:13px;color:#cde3ff}
+  .muted{color:var(--mut)}
+  .pill-warn{color:var(--warn)}
+  button{background:#182233;color:var(--tx);border:1px solid #2a3b55;border-radius:8px;
+    padding:7px 14px;font-size:13.5px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--acc);color:#fff}
+  button.primary{background:var(--acc);border-color:var(--acc);color:#06121f;font-weight:600}
+  button.primary:hover{filter:brightness(1.1)}
+  input[type=text]{background:#0d1420;border:1px solid var(--line);border-radius:8px;color:var(--tx);
+    padding:7px 10px;font-family:var(--mono);font-size:14px;width:230px}
+  input[type=range]{accent-color:var(--acc)}
+  select{background:#0d1420;border:1px solid var(--line);border-radius:8px;color:var(--tx);padding:7px 10px;font-size:13.5px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:10px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .panel{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .panel h4{margin:0 0 10px;font-size:13.5px;color:var(--mut);font-weight:600}
+  table.tbl{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tbl th,table.tbl td{border-bottom:1px solid var(--line);padding:5px 9px;text-align:left}
+  table.tbl th{color:var(--mut);font-weight:600;font-family:inherit}
+  canvas{border-radius:8px;border:1px solid var(--line);background:#0a0e13;max-width:100%}
+  .bitrow{display:flex;gap:3px;align-items:center;flex-wrap:wrap;margin:3px 0}
+  .bb{width:17px;height:24px;border-radius:4px;background:#1a2230;color:#5c6b7d;flex-shrink:0;
+    font-family:var(--mono);font-size:11px;display:flex;align-items:center;justify-content:center}
+  .bb.on{background:var(--acc);color:#06121f;font-weight:700}
+  .bb.click{cursor:pointer}
+  .bb.click:hover{outline:2px solid var(--warn)}
+  .bb.fromA{border-bottom:3px solid var(--warn)}
+  .bb.fromB{border-bottom:3px solid var(--ok)}
+  .bitlabel{font-family:var(--mono);font-size:12px;color:var(--mut);min-width:230px}
+  .bitlabel b{color:var(--tx)}
+  .hex{font-family:var(--mono);color:#cde3ff}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .chip{font-family:var(--mono);font-size:12px;background:#101b2b;border:1px solid #24405f;
+    border-radius:6px;padding:3px 8px;color:#9fd0ff}
+  .mrow{display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer}
+  .mrow:hover{background:#141b26}
+  .badge{font-size:11px;font-family:var(--mono);border-radius:999px;padding:1px 9px;white-space:nowrap}
+  .b-ok{color:var(--ok);border:1px solid #1d4227;background:#0f1d14}
+  .b-bad{color:var(--bad);border:1px solid #4d2020;background:#200f0f}
+  .explist{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .explist span{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:6px;
+    padding:2px 8px;color:var(--mut)}
+  .explist span.hl{color:#06121f;background:var(--warn);border-color:var(--warn);font-weight:700}
+  .orbitbox{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+  .orbit{width:150px;height:150px;border:2px dashed #2a3b55;border-radius:50%;position:relative;
+    animation:spin 16s linear infinite;flex-shrink:0}
+  .orbit i{position:absolute;top:50%;left:50%;width:10px;height:10px;border-radius:50%;
+    margin:-5px 0 0 -5px;transform:rotate(var(--r)) translateY(-69px)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .chain{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:14px 0}
+  .chain .node{background:#101b2b;border:1px solid #24405f;border-radius:10px;padding:10px 14px;
+    font-size:13px;text-align:center;flex:1;min-width:110px}
+  .chain .node b{display:block;color:#9fd0ff;font-family:var(--mono);font-size:12.5px}
+  .chain .arr{display:flex;align-items:center;color:var(--mut);padding:0 7px}
+  details{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:9px 0}
+  summary{cursor:pointer;font-weight:600}
+  summary::marker{color:var(--acc)}
+  .flag{font-family:var(--mono);font-size:12.5px;padding:2px 10px;border-radius:6px;display:inline-block;margin:4px 0}
+  .f-ok{color:var(--ok);background:#0f1d14;border:1px solid #1d4227}
+  .f-bad{color:var(--bad);background:#200f0f;border:1px solid #4d2020}
+  footer{color:var(--mut);font-size:12.5px;margin-top:30px;line-height:1.9}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="tag">Interactive close reading</div>
+  <h1>Mersenne Twister: how one seed decides everything</h1>
+  <div class="sub">Matsumoto &amp; Nishimura (1998) · The third of the three core papers: Musgrave covers terrain synthesis, Lagae covers noise functions, and this one answers <b>why a single seed can control everything</b>.</div>
+  <div class="cite">ACM TOMACS 8(1), 3–30 · DOI 10.1145/272991.272995 · Companion notes: Docs/Reference/matsumoto-1998-close-reading.md</div>
+  <div class="stats">
+    <div class="stat"><b>2^19937 − 1</b><span>period (super-astronomical — and prime)</span></div>
+    <div class="stat"><b>624 words</b><span>working area (32 bits × 624 − 31 = 19937 bits of state)</span></div>
+    <div class="stat"><b>623 dims</b><span>equidistribution at 32-bit accuracy (⌊19937/32⌋)</span></div>
+    <div class="stat"><b>~100 terms</b><span>terms in the characteristic polynomial (the trinomial lesson)</span></div>
+    <div class="stat"><b>Not crypto-safe</b><span>linear and invertible ⇒ output can be reversed (admitted in §1.6)</span></div>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#s1">① Deterministic recurrence</a><a href="#s2">② k-distribution</a><a href="#s3">③ Twist recurrence</a>
+  <a href="#s4">④ Tempering &amp; inversion</a><a href="#s5">⑤ Mersenne primes</a><a href="#s6">⑥ Limits</a>
+  <a href="#s7">⑦ Back to the project</a><a href="#s8">⑧ Self-test</a>
+</nav>
+
+<!-- ============ 1 determinism ============ -->
+<section id="s1">
+  <div class="tag">Core invariant · report §2.3</div>
+  <h2>① Pseudo-random = deterministic recurrence: the seed is the initial state</h2>
+  <p class="lead">The paper stresses one thing throughout: a generator is not a source of true randomness but a fixed orbit, and <b>the seed only decides where you board</b>. Below is splitmix64 — the generator this project actually uses — from the same deterministic-recurrence family as MT. Verify the invariant with your own hands.</p>
+  <div class="row">
+    <label>Seed A</label><input type="text" id="smSeedA" value="1">
+    <button class="primary" id="smRunA">Run A</button>
+    <button id="smSync">B ← A (same seed)</button>
+    <button id="smRand">B ← random seed</button>
+    <span class="muted">Seed B: <span class="hex" id="smSeedBv">1</span></span>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h4>Run A: first 8 outputs</h4><table class="tbl" id="smTblA"></table></div>
+    <div class="panel"><h4>Run B: first 8 outputs</h4><table class="tbl" id="smTblB"></table></div>
+  </div>
+  <div id="smVerdict"></div>
+  <p class="muted">Table columns: the stepped 64-bit state (each step adds the golden-ratio constant γ = 2<sup>64</sup>/φ), the mixed output, and the output mapped to [0,1). The state itself is just "seed + k·γ" — <b>output is a pure function of state</b>. In this project it does exactly one job: shuffling the 256-entry Perlin permutation table (about 255 draws).</p>
+</section>
+
+<!-- ============ 2 k-distribution ============ -->
+<section id="s2">
+  <div class="tag">Paper §1.2 · Definition 1.1</div>
+  <h2>② k-distribution: turning "looks random" into a checkable claim</h2>
+  <p class="lead">Definition: take the top v bits of each of k consecutive values and tile the whole period — all 2<sup>kv</sup> bit patterns must occur equally often (all-zero excepted). Geometric picture: cut the unit cube into equal small cells; <b>every cell must receive the same number of points</b>. Below is the k = 2 two-dimensional slice — left: scatter of consecutive pairs; right: cell-occupancy heatmap. Switch generators and the difference shows instantly.</p>
+  <div class="row">
+    <select id="kGen">
+      <option value="lcg">Bad LCG: x = 13x + 1 (mod 2¹⁶)</option>
+      <option value="mt" selected>MT19937</option>
+      <option value="sm">splitmix64 (used by the project)</option>
+    </select>
+    <label>points <span id="kNv" class="hex">4096</span><input type="range" id="kN" min="512" max="16384" step="512" value="4096"></label>
+    <label>accuracy v = <span id="kVv" class="hex">4</span> bits<input type="range" id="kV" min="2" max="6" step="1" value="4"></label>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h4>Scatter of consecutive pairs (xᵢ, xᵢ₊₁)</h4><canvas id="kScat" width="360" height="360"></canvas></div>
+    <div class="panel"><h4>2^v × 2^v cell counts (a 2-D slice of k-distribution)</h4><canvas id="kHeat" width="360" height="360"></canvas>
+      <div id="kStats" style="font-family:var(--mono);font-size:12.5px;margin-top:8px;color:var(--mut)"></div></div>
+  </div>
+  <p class="muted">Every consecutive pair of the bad LCG falls exactly on the line y = 13x + 1 (mod 2¹⁶) — about 13 parallel lines, so many cells stay empty forever. MT19937 and splitmix64 hover around the expected count. <span class="pill-warn">Note:</span> classic large-modulus LCGs (RANDU, for example) can fake uniformity in 2-D; their flaws only surface in 3-D (15 planes) or lagged projections — exactly why the paper prefers k-distribution, <b>a criterion computable for any k and v</b>.</p>
+</section>
+
+<!-- ============ 3 twist ============ -->
+<section id="s3">
+  <div class="tag">Paper §2.1 · eq. (2.1)</div>
+  <h2>③ The twist recurrence: how a new word is twisted out of old ones</h2>
+  <p class="lead">The recurrence: <code>x_{k+624} := x_{k+397} ⊕ (top 31 bits of x_k | lowest bit of x_{k+1}) × A</code>, parameters (w, n, m, r) = (32, 624, 397, 31). The matrix A is shaped so that multiplying by it reduces to <b>shift right by one, then XOR the constant 0x9908B0DF if the lowest bit is 1</b> — that is where the name Twister comes from. Below we dissect one word of the live buffer.</p>
+  <div class="row">
+    <label>Seed</label><input type="text" id="mtSeed" value="5489">
+    <button class="primary" id="mtRebuild">Rebuild the 624-word buffer</button>
+    <button id="mtStep">Emit next output word</button>
+    <span class="muted">emitted: <span class="hex" id="mtCount">0</span></span>
+  </div>
+  <div class="panel"><h4>624-word state band (one word per column, color = word value; yellow = i, green = i+397 — the two columns the recurrence pairs)</h4>
+    <canvas id="mtRing" width="624" height="56" style="width:100%"></canvas></div>
+  <div class="row" style="margin-top:14px">
+    <label>Dissect word # <span class="hex" id="mtIv">0</span><input type="range" id="mtI" min="0" max="623" value="0"></label>
+    <span id="mtTwistNote" class="muted"></span>
+  </div>
+  <div class="panel" id="mtDetail"></div>
+  <div class="chips" id="mtOut"></div>
+  <p class="muted">Every 624 emitted words one <b>full twist</b> updates all 624 words at once — the band recolors end to end. Outputs must still pass the tempering of §④ before becoming final random numbers.</p>
+</section>
+
+<!-- ============ 4 tempering ============ -->
+<section id="s4">
+  <div class="tag">Paper §2.1 eq. (2.2)–(2.5) · §1.6</div>
+  <h2>④ Tempering: curing the low bits; invertible = not secure</h2>
+  <p class="lead">The raw recurrence output has poor k-distribution in its low bits, so every output word passes four shift-and-mask XORs. <b>Click any bit in the input row below</b> and watch the four steps respond — the flip pattern is fixed: tempering is a linear map, which is both why it runs on bit operations and why it <b>can be inverted</b>.</p>
+  <div class="row">
+    <button class="primary" id="tpRnd">Load a random input word</button>
+    <span class="muted">current input: <span class="hex" id="tpHex"></span> (click a square in the row to flip that bit)</span>
+  </div>
+  <div class="panel" id="tpRows"></div>
+  <h3>Inversion demo: why the paper says MT is not cryptographically secure (§1.6)</h3>
+  <p class="muted">Output z = x·T, and T is invertible. Given z, four inverse steps recover the raw recurrence word x; given 624 consecutive outputs you can solve for the entire internal state. The remedy the paper gives: pass output through a secure hash first whenever cryptography matters.</p>
+  <div class="row">
+    <label>z (hex)</label><input type="text" id="utIn" value="">
+    <button class="primary" id="utGo">Invert T⁻¹</button>
+    <span class="muted">recovered x = <span class="hex" id="utOut">—</span></span>
+  </div>
+  <div><span id="utSelf" class="flag f-ok"></span></div>
+</section>
+
+<!-- ============ 5 mersenne ============ -->
+<section id="s5">
+  <div class="tag">Paper §3.1</div>
+  <h2>⑤ Why it must be a Mersenne prime: the arithmetic of 19937</h2>
+  <div class="panel" style="font-family:var(--mono);font-size:15px;line-height:2.3">
+    state = 624 words × 32 bits = <b>19968</b> bits<br>
+    the incomplete array drops r = 31 bits ⇒ <b>19937</b> bits = Mersenne-prime exponent p<br>
+    ⇒ period = 2<sup>19937</sup> − 1 is <b>prime</b> ⇒ the period proof <b>needs no factorization</b><br>
+    ⇒ the title: ⌊19937 / 32⌋ = <b style="color:var(--warn)">623</b> dimensions of 32-bit-accuracy equidistribution
+  </div>
+  <p class="muted">To prove the period reaches 2^p−1 you must verify that the order of t in (F₂[t]/φ)× is exactly 2^p−1 — one check per prime factor q of 2^p−1. If 2^p−1 is composite (p = 11, say) it must be fully factored first; if it is prime, a single check suffices — <b>primality testing is far easier than factoring</b>, and that is the entire motivation for choosing a Mersenne prime.</p>
+  <h3>Small-exponent test bench (click a row for the explanation)</h3>
+  <div id="mersTbl"></div>
+  <div id="mersNote" class="flag f-ok">Click any row for the explanation</div>
+  <h3>Known Mersenne exponents (up to p = 1398269 when the paper was written)</h3>
+  <div class="explist" id="mersList"></div>
+  <p class="muted">19937 sits on this list — the parameters of MT amount to picking a memory-feasible exponent from the list and solving back for (n, r) = (624, 31).</p>
+  <h3>Bonus: initialization is care-free</h3>
+  <div class="orbitbox">
+    <div class="orbit">
+      <i style="--r:0deg;background:var(--acc)"></i><i style="--r:40deg;background:var(--ok)"></i>
+      <i style="--r:95deg;background:var(--warn)"></i><i style="--r:170deg;background:var(--bad)"></i>
+      <i style="--r:230deg;background:#b07cff"></i><i style="--r:300deg;background:#5ce1e6"></i>
+    </div>
+    <div style="flex:1;min-width:260px">Maximal period ⇒ primitive characteristic polynomial ⇒ <b>all non-zero states lie on one single orbit</b>. The differently colored seeds are merely different starting points on the same loop; the scenery along the way — the statistics of the whole period — is identical. "The choice of an initial seed does not affect the randomness", in deliberate contrast to GFSR days, when initialization was a delicate affair.</div>
+  </div>
+</section>
+
+<!-- ============ 6 limits ============ -->
+<section id="s6">
+  <div class="tag">Paper §1.6</div>
+  <h2>⑥ The limits the paper admits itself</h2>
+  <p>The gist of §1.6: MT <b>as it stands is not cryptographically secure</b> — output passes through an invertible linear map only, and the inversion demo in §④ is the evidence; wrap it in a secure hash first if cryptography matters. It is designed for uniform <b>reals</b> in [0,1], with emphasis on the most significant bits (the generators that failed the Ising-model test had exactly high-bit defects); concatenate two words for 64-bit integers. One sentence for this project: <b>determinism ≠ unpredictability, and the course demo only needs the former</b>.</p>
+</section>
+
+<!-- ============ 7 project ============ -->
+<section id="s7">
+  <div class="tag">Report §2.3 · §3.2</div>
+  <h2>⑦ Back to the project: inherit the invariant, not the algorithm</h2>
+  <table class="tbl">
+    <tr><th></th><th>MT19937</th><th>splitmix64 (the project)</th></tr>
+    <tr><td>State</td><td>624 words (19937 bits)</td><td>1 word (64 bits)</td></tr>
+    <tr><td>Warm-up</td><td>must fill 624 words</td><td>none</td></tr>
+    <tr><td>Period</td><td>2^19937 − 1</td><td>2^64 (counter-style)</td></tr>
+    <tr><td>Usage here</td><td colspan="2" style="color:var(--mut)">total consumption ≈ 255 draws: one shuffle of the 256-entry table; afterwards noise sampling is pure table lookup</td></tr>
+    <tr><td>What is inherited</td><td colspan="2">two disciplines: ① generator state derives only from the seed; ② every "random" datum in the system derives only from that generator</td></tr>
+  </table>
+  <div class="chain">
+    <div class="node"><b>seed</b>integer seed</div><div class="arr">→</div>
+    <div class="node"><b>splitmix64</b>deterministic recurrence</div><div class="arr">→</div>
+    <div class="node"><b>Fisher-Yates</b>shuffle 256-entry table</div><div class="arr">→</div>
+    <div class="node"><b>Perlin + fBm</b>table lookup</div><div class="arr">→</div>
+    <div class="node"><b>heightmap</b>normalization</div><div class="arr">→</div>
+    <div class="node"><b>FNV-1a</b>bitwise fingerprint</div>
+  </div>
+  <p class="lead">Below is the browser edition of that chain (same design as the Unity project): change the seed and the terrain changes; run the same seed twice and the FNV-1a fingerprints match bit for bit — that is what it looks like when the controllability criterion turns from a demonstration into an assertion.</p>
+  <div class="row">
+    <label>Seed</label><input type="text" id="tSeed" value="1">
+    <button class="primary" id="tGo">Generate terrain</button>
+    <button id="tRand">Random seed</button>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h4>Heightmap (193², fBm 5 octaves, lacunarity 2, persistence 0.5, hillshaded)</h4>
+      <canvas id="tCanvas" width="384" height="384"></canvas></div>
+    <div>
+      <div class="panel"><h4>Permutation table (256 entries, shuffled from the seed)</h4><canvas id="tPerm" width="256" height="26" style="width:100%"></canvas></div>
+      <div class="panel" style="margin-top:14px"><h4>Determinism self-check: same seed, two runs</h4>
+        <div style="font-family:var(--mono);font-size:13px">run 1 FNV-1a64: <span id="tH1" style="color:#9fd0ff">—</span><br>run 2 FNV-1a64: <span id="tH2" style="color:#9fd0ff">—</span></div>
+        <div id="tVerdict" style="margin-top:6px"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8 self-test ============ -->
+<section id="s8">
+  <div class="tag">Defence self-test · notes §8</div>
+  <h2>⑧ Seven self-test questions (think first, then expand)</h2>
+  <details><summary>1. What do the two words of the name mean?</summary><p>Mersenne: the period is 2^p−1 with p a Mersenne-prime exponent; Twister: the matrix A "twists" the concatenated high-and-low bits in the recurrence (shift right, then a conditional XOR constant).</p></details>
+  <details><summary>2. Where does 623 come from?</summary><p>State bits nw−r = 624×32−31 = 19937, and ⌊19937/32⌋ = 623 — at 32-bit accuracy at most 623 dimensions of equidistribution; 31 bits are missing for a 624th.</p></details>
+  <details><summary>3. The geometric and cryptographic readings of k-distribution?</summary><p>Geometric: equal point counts in every cell of the k-dimensional unit cube. Cryptographic: knowing the top v bits of the first k−1 words tells you nothing about the top v bits of the next word.</p></details>
+  <details><summary>4. Why is the number of polynomial terms a criterion?</summary><p>Trinomial-family generators failed in a real simulation (the Ising model, Ferrenberg et al. 1992); the characteristic polynomial of MT has roughly 100 terms and no engineered relation to a trinomial.</p></details>
+  <details><summary>5. Why is MT inherently insecure?</summary><p>Output = state × invertible matrix T; T⁻¹ turns output back into the linear recurrence, and 624 consecutive outputs solve the whole state (see §④ on this page).</p></details>
+  <details><summary>6. Why does the project not use MT19937?</summary><p>The whole pipeline consumes about 255 draws (one table shuffle); the one-word state and zero warm-up of splitmix64 suffice. What is inherited is the invariant "seed → deterministic recurrence", not the specific algorithm.</p></details>
+  <details><summary>7. Why does initialization not matter?</summary><p>A primitive characteristic polynomial gives a single orbit: all non-zero states lie on it, so the seed only picks the starting point and never changes the statistics of the full period.</p></details>
+</section>
+
+<footer>
+  Source: Matsumoto &amp; Nishimura (1998), <i>Mersenne Twister</i>, ACM TOMACS 8(1), 3–30. DOI 10.1145/272991.272995 (the PDF is kept locally under Docs/Report/ref/).<br>
+  Section-by-section close-reading notes: Docs/Reference/matsumoto-1998-close-reading.md · This page is a self-contained single file with no external dependencies and works offline.
+</footer>
+</div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const MASK64=(1n<<64n)-1n;
+
+/* ---------- splitmix64 (BigInt), same design as the project's SeededRng ---------- */
+function makeSplitmix64(seed){
+  let state=seed & MASK64;
+  return function(){
+    state=(state+0x9E3779B97F4A7C15n)&MASK64;
+    let z=state;
+    z=((z^(z>>30n))*0xBF58476D1CE4E5B9n)&MASK64;
+    z=((z^(z>>27n))*0x94D049BB133111EBn)&MASK64;
+    return (z^(z>>31n))&MASK64;
+  };
+}
+const smToFloat=z=>Number(z>>40n)/16777216; /* top-24 bits, same as the C# project */
+function parseBig(t,fb){ try{ const v=BigInt(String(t).trim()); if(v<0n) return fb; return v&MASK64; }catch(e){ return fb; } }
+
+/* ---------- 32-bit helpers: temper / untemper ---------- */
+const u32=x=>x>>>0;
+function temper(x){
+  let y=u32(x);
+  y=u32(y^(y>>>11));
+  y=u32(y^((y<<7)&0x9D2C5680));
+  y=u32(y^((y<<15)&0xEFC60000));
+  y=u32(y^(y>>>18));
+  return y;
+}
+function unshiftR(x,s){ let r=u32(x); for(let d=s;d<32;d+=s) r=u32(x^(r>>>s)); return r; }
+function unshiftL(x,s,m){ let r=u32(x); for(let d=s;d<32;d+=s) r=u32(x^((r<<s)&m)); return r; }
+function untemper(z){ let x=u32(z); x=unshiftR(x,18); x=unshiftL(x,15,0xEFC60000); x=unshiftL(x,7,0x9D2C5680); x=unshiftR(x,11); return u32(x); }
+
+/* ---------- MT19937 ---------- */
+const N=624, M=397, MATRIX_A=0x9908B0DF, UPPER=0x80000000, LOWER=0x7fffffff;
+const mt=new Uint32Array(N); let mti=N;
+function mtInit(seed){
+  mt[0]=u32(Number(seed&0xFFFFFFFFn));
+  for(let i=1;i<N;i++) mt[i]=u32(Math.imul(1812433253,mt[i-1]^(mt[i-1]>>>30))+i);
+  mti=N;
+}
+function mtTwist(){
+  for(let i=0;i<N;i++){
+    const y=u32((mt[i]&UPPER)|(mt[(i+1)%N]&LOWER));
+    mt[i]=u32(mt[(i+M)%N]^(y>>>1)^((y&1)?MATRIX_A:0));
+  }
+}
+function mtNext(){ if(mti>=N){ mtTwist(); mti=0; } return temper(mt[mti++]); }
+
+/* ---------- bit rows ---------- */
+function bits32(val,cls){
+  let s='';
+  for(let i=31;i>=0;i--){ const b=(val>>>i)&1; s+=`<span class="bb ${b?'on':''} ${cls||''}" data-bit="${i}">${b}</span>`; }
+  return s;
+}
+function rowHTML(label,note,val,cls){
+  return `<div class="bitrow"><div class="bitlabel">${label}<br><b>${note}</b></div>${bits32(val,cls)}</div>`;
+}
+const hex8=v=>'0x'+u32(v).toString(16).toUpperCase().padStart(8,'0');
+
+/* ================= ① splitmix64 ================= */
+let seedB=1n;
+function smTable(seed){
+  const next=makeSplitmix64(seed);
+  let st=seed&MASK64;
+  let rows='<tr><th>#</th><th>state (+γ)</th><th>output z</th><th>z→[0,1)</th></tr>';
+  for(let i=1;i<=8;i++){
+    st=(st+0x9E3779B97F4A7C15n)&MASK64;
+    const z=next();
+    rows+=`<tr><td>${i}</td><td>${st.toString(16).toUpperCase().padStart(16,'0')}</td><td style="color:#9fd0ff">${z.toString(16).toUpperCase().padStart(16,'0')}</td><td>${smToFloat(z).toFixed(6)}</td></tr>`;
+  }
+  return rows;
+}
+function smDraw(){
+  $('smTblA').innerHTML=smTable(parseBig($('smSeedA').value,1n));
+  $('smTblB').innerHTML=smTable(seedB);
+  $('smSeedBv').textContent=seedB.toString();
+  const sa=parseBig($('smSeedA').value,1n);
+  $('smVerdict').innerHTML = sa===seedB
+    ? '<span class="flag f-ok">✓ same seed, two runs: all 8 outputs bit-identical (determinism)</span>'
+    : `<span class="flag f-bad">✗ different seeds (${sa.toString()} vs ${seedB.toString()}): outputs diverge from the very first value (seed separation)</span>`;
+}
+$('smRunA').onclick=smDraw;
+$('smSync').onclick=()=>{ seedB=parseBig($('smSeedA').value,1n); smDraw(); };
+$('smRand').onclick=()=>{ seedB=(BigInt(Math.floor(Math.random()*0xFFFFFFFF))<<32n)|BigInt(Math.floor(Math.random()*0xFFFFFFFF)); smDraw(); };
+$('smSeedA').addEventListener('change',smDraw);
+
+/* ================= ② k-distribution ================= */
+function kDraw(){
+  const g=$('kGen').value, n=+$('kN').value, v=+$('kV').value;
+  $('kNv').textContent=n; $('kVv').textContent=v;
+  let f;
+  if(g==='lcg'){ let x=12345; f=()=>{ x=(13*x+1)%65536; return x/65536; }; }
+  else if(g==='sm'){ const nx=makeSplitmix64(0x12345678n); f=()=>smToFloat(nx()); }
+  else { mtInit(5489n); f=()=>mtNext()/4294967296; }
+  const pts=[]; let prev=f();
+  for(let i=0;i<n;i++){ const cur=f(); pts.push([prev,cur]); prev=cur; }
+  /* scatter */
+  const sc=$('kScat').getContext('2d');
+  sc.fillStyle='#0a0e13'; sc.fillRect(0,0,360,360);
+  sc.fillStyle='rgba(96,165,250,.75)';
+  for(const p of pts) sc.fillRect(p[0]*354+2,358-(p[1]*354+2),2,2);
+  /* occupancy heatmap */
+  const cells=1<<v, cnt=new Uint32Array(cells*cells);
+  for(const p of pts){
+    const ix=Math.min(cells-1,(p[0]*cells)|0), iy=Math.min(cells-1,(p[1]*cells)|0);
+    cnt[iy*cells+ix]++;
+  }
+  let mx=0,mn=Infinity;
+  for(const c of cnt){ if(c>mx)mx=c; if(c<mn)mn=c; }
+  const hc=$('kHeat').getContext('2d');
+  hc.fillStyle='#0a0e13'; hc.fillRect(0,0,360,360);
+  const px=360/cells;
+  for(let y=0;y<cells;y++)for(let x=0;x<cells;x++){
+    const c=cnt[y*cells+x];
+    if(c===0){ hc.fillStyle='#231320'; }
+    else{
+      const t=Math.pow(c/mx,.45);
+      hc.fillStyle=`rgb(${Math.round(27+t*203)},${Math.round(42+t*203)},${Math.round(68+t*187)})`;
+    }
+    hc.fillRect(x*px+.7,y*px+.7,px-1.4,px-1.4);
+  }
+  const expc=n/(cells*cells);
+  $('kStats').innerHTML=`expected per cell = ${n} / ${cells*cells} = <b style="color:var(--tx)">${expc.toFixed(1)}</b> · observed min <b style="color:var(--bad)">${mn}</b> / max <b style="color:var(--acc)">${mx}</b>${mn===0?' · <span style="color:var(--bad)">some cells are never hit</span>':''}`;
+}
+['kGen','kN','kV'].forEach(id=>$(id).addEventListener('input',kDraw));
+
+/* ================= ③ twist lab ================= */
+let mtOutCount=0;
+function drawRing(hiA,hiB){
+  const c=$('mtRing').getContext('2d');
+  c.fillStyle='#0a0e13'; c.fillRect(0,0,N,56);
+  for(let i=0;i<N;i++){
+    const val=mt[i]/4294967295;
+    c.fillStyle=`hsl(212,68%,${Math.round(14+val*62)}%)`;
+    c.fillRect(i,4,1,48);
+  }
+  if(hiA!=null){ c.fillStyle='#f0b429'; c.fillRect(hiA,0,3,56); }
+  if(hiB!=null){ c.fillStyle='#3fb950'; c.fillRect(hiB,0,3,56); }
+}
+function mtDetail(){
+  const i=+$('mtI').value; $('mtIv').textContent=i;
+  const j=(i+1)%N, k=(i+M)%N;
+  const y=u32((mt[i]&UPPER)|(mt[j]&LOWER));
+  const y1=u32(y>>>1), yA=u32(y1^((y&1)?MATRIX_A:0));
+  const res=u32(mt[k]^yA);
+  let ybits='';
+  for(let b=31;b>=0;b--){
+    const on=(y>>>b)&1;
+    ybits+=`<span class="bb ${on?'on':''} ${b===31?'fromA':'fromB'}">${on}</span>`;
+  }
+  $('mtDetail').innerHTML=
+   `<div class="bitrow"><div class="bitlabel">x<sub>${i}</sub><br><b>${hex8(mt[i])}</b> contributes the top 1 bit</div>${bits32(mt[i])}</div>`+
+   `<div class="bitrow"><div class="bitlabel">x<sub>${j}</sub> (i+1)<br><b>${hex8(mt[j])}</b> contributes the low 31 bits</div>${bits32(mt[j])}</div>`+
+   `<div class="bitrow"><div class="bitlabel">y = concatenation<br><b>${hex8(y)}</b> <span style="color:var(--warn)">yellow = top bit</span> + <span style="color:var(--ok)">green = low 31 bits</span></div>${ybits}</div>`+
+   `<div class="bitrow"><div class="bitlabel">y ≫ 1${(y&1)?' ⊕ 0x9908B0DF':''}<br><b>${hex8(y&1?yA:y1)}</b> ${(y&1)?'lowest bit is 1 ⇒ add the twist constant':'lowest bit is 0 ⇒ plain shift'}</div>${bits32(y&1?yA:y1)}</div>`+
+   `<div class="bitrow"><div class="bitlabel">⊕ x<sub>${k}</sub> (i+397)<br><b>${hex8(res)}</b> the new word</div>${bits32(res)}</div>`;
+  drawRing(i,k);
+  $('mtTwistNote').textContent=(y&1)?'this word triggers the twist constant':'';
+}
+$('mtRebuild').onclick=()=>{
+  mtInit(parseBig($('mtSeed').value,5489n));
+  mtOutCount=0; $('mtOut').innerHTML=''; $('mtCount').textContent='0';
+  mtDetail();
+};
+$('mtI').addEventListener('input',mtDetail);
+$('mtStep').onclick=()=>{
+  const before=mti;
+  const w=mtNext(); mtOutCount++;
+  if(before>=N){
+    const note=document.createElement('span');
+    note.className='chip'; note.style.cssText='border-color:var(--warn);color:var(--warn)';
+    note.textContent='⟴ full twist just happened: all 624 words updated';
+    $('mtOut').prepend(note);
+  }
+  const chip=document.createElement('span'); chip.className='chip'; chip.textContent=hex8(w);
+  $('mtOut').prepend(chip);
+  while($('mtOut').children.length>10) $('mtOut').removeChild($('mtOut').lastChild);
+  $('mtCount').textContent=mtOutCount;
+  mtDetail();
+};
+
+/* ================= ④ tempering ================= */
+let tpX=0x12345678;
+function tpDraw(){
+  const x=tpX;
+  const s1=u32(x^(x>>>11));
+  const s2=u32(s1^((s1<<7)&0x9D2C5680));
+  const s3=u32(s2^((s2<<15)&0xEFC60000));
+  const s4=u32(s3^(s3>>>18));
+  $('tpHex').textContent=hex8(x);
+  $('tpRows').innerHTML=
+   rowHTML('input x (raw recurrence word)','click a square to flip a bit',x,'click')+
+   rowHTML('① y := x ⊕ (x ≫ 11)',hex8(s1),s1)+
+   rowHTML('② y := y ⊕ ((y ≪ 7) &amp; 0x9D2C5680)',hex8(s2),s2)+
+   rowHTML('③ y := y ⊕ ((y ≪ 15) &amp; 0xEFC60000)',hex8(s3),s3)+
+   rowHTML('④ z := y ⊕ (y ≫ 18) → output',hex8(s4),s4);
+  Array.from($('tpRows').querySelectorAll('.bb.click')).forEach(el=>{
+    el.onclick=()=>{ tpX=u32(tpX^(1<<+el.dataset.bit)); tpDraw(); };
+  });
+  $('utIn').value=hex8(s4);
+}
+$('tpRnd').onclick=()=>{ tpX=u32(Math.floor(Math.random()*4294967296)); tpDraw(); };
+$('utGo').onclick=()=>{
+  const z=parseInt($('utIn').value.replace(/^0x/i,''),16);
+  $('utOut').textContent=Number.isFinite(z)?hex8(untemper(u32(z))):'(invalid input)';
+};
+/* self-check */
+(function(){
+  const t=temper(0x12345678), ok=untemper(t)===0x12345678;
+  $('utSelf').textContent=ok?'✓ self-check passed: untemper(temper(0x12345678)) = 0x12345678 (linearity made visible)':'self-check failed';
+  $('utSelf').className='flag '+(ok?'f-ok':'f-bad');
+})();
+
+/* ================= ⑤ mersenne ================= */
+const MERS=[
+ {p:2,f:null},{p:3,f:null},{p:5,f:null},{p:7,f:null},
+ {p:11,f:'2047 = 23 × 89'},{p:13,f:null},{p:17,f:null},{p:19,f:null},
+ {p:23,f:'8388607 = 47 × 178481'},{p:29,f:'536870911 = 233 × 1103 × 2089'},
+ {p:31,f:null},{p:37,f:'137438953471 = 223 × 616318177'},
+ {p:41,f:'2199023255551 = 13367 × 164511353'},{p:43,f:null},
+ {p:47,f:'140737488355327 = 235 × 4513 × 13264529'}];
+const EXP_LIST=[2,3,5,7,13,17,19,31,61,89,107,127,521,607,1279,2203,2281,3217,4253,4423,9689,9941,11213,19937,21701,23209,44497,86243,110503,132049,216091,756839,859433,1398269];
+function mersDraw(){
+  $('mersTbl').innerHTML=MERS.map(m=>
+   `<div class="mrow" data-p="${m.p}"><span class="hex" style="min-width:52px;display:inline-block">p = ${m.p}</span>`+
+   `<span class="badge ${m.f?'b-bad':'b-ok'}">${m.f?'2^p−1 is composite':'2^p−1 is prime ✓'}</span>`+
+   `<span class="muted" style="font-family:var(--mono);font-size:12px">${m.f?m.f:'period proof needs only a primality test'}</span></div>`).join('');
+  Array.from($('mersTbl').children).forEach(el=>{
+    el.onclick=()=>{
+      const m=MERS.find(x=>x.p==el.dataset.p);
+      if(m.f){
+        $('mersNote').textContent=`p=${m.p} is prime, but 2^p−1 = ${m.f} — a prime exponent is only a necessary condition. Proving the period would then require fully factoring 2^p−1 and checking every factor, infeasible for large p.`;
+        $('mersNote').className='flag f-bad';
+      }else{
+        $('mersNote').textContent=`p=${m.p}: 2^p−1 is prime, so verifying that the order of t equals 2^p−1 is a single check (primality beats factoring) — exactly why MT picked 19937.`;
+        $('mersNote').className='flag f-ok';
+      }
+    };
+  });
+  $('mersList').innerHTML=EXP_LIST.map(p=>`<span class="${p===19937?'hl':''}">${p}</span>`).join('');
+}
+
+/* ================= ⑦ terrain ---------- */
+function shufflePerm(seed){
+  const nx=makeSplitmix64(seed);
+  const p=new Uint8Array(256);
+  for(let i=0;i<256;i++)p[i]=i;
+  for(let i=255;i>0;i--){
+    const j=(Number(nx()>>40n)*(i+1))>>24;
+    const t=p[i]; p[i]=p[j]; p[j]=t;
+  }
+  const perm=new Uint16Array(512);
+  for(let i=0;i<512;i++) perm[i]=p[i&255];
+  return perm;
+}
+const SQ2=Math.SQRT1_2;
+const GRAD=[[1,0],[-1,0],[0,1],[0,-1],[SQ2,SQ2],[SQ2,-SQ2],[-SQ2,SQ2],[-SQ2,-SQ2]];
+function fade(t){ return t*t*t*(t*(t*6-15)+10); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function gdot(g,dx,dy){ return g[0]*dx+g[1]*dy; }
+function perlin2(perm,x,y){
+  const X=Math.floor(x)&255, Y=Math.floor(y)&255;
+  const xf=x-Math.floor(x), yf=y-Math.floor(y);
+  const u=fade(xf), v=fade(yf);
+  const aa=GRAD[perm[perm[X]+Y]&7], ba=GRAD[perm[perm[X+1]+Y]&7];
+  const ab=GRAD[perm[perm[X]+Y+1]&7], bb=GRAD[perm[perm[X+1]+Y+1]&7];
+  return lerp(lerp(gdot(aa,xf,yf),gdot(ba,xf-1,yf),u),
+              lerp(gdot(ab,xf,yf-1),gdot(bb,xf-1,yf-1),u),v);
+}
+function buildTerrain(seed){
+  const perm=shufflePerm(seed);
+  const res=193, world=200, scale=120, oct=5, lac=2, per=0.5;
+  const h=new Float32Array(res*res);
+  let mn=Infinity,mx=-Infinity;
+  for(let z=0;z<res;z++)for(let x=0;x<res;x++){
+    const wx=x/(res-1)*world, wz=z/(res-1)*world;
+    let f=1/scale, a=1, sum=0, norm=0;
+    for(let o=0;o<oct;o++){ sum+=perlin2(perm,wx*f,wz*f)*a; norm+=a; f*=lac; a*=per; }
+    const val=sum/norm;
+    h[z*res+x]=val;
+    if(val<mn)mn=val; if(val>mx)mx=val;
+  }
+  const rg=(mx-mn)||1;
+  for(let i=0;i<h.length;i++) h[i]=(h[i]-mn)/rg;
+  return {h,res,perm};
+}
+function fnv1a64(h){
+  let hash=0xcbf29ce484222325n;
+  for(let i=0;i<h.length;i++){
+    hash^=BigInt(Math.max(0,Math.min(255,h[i]*255|0)));
+    hash=(hash*0x100000001b3n)&MASK64;
+  }
+  return hash;
+}
+function ramp(t){
+  const stops=[[0,[26,60,94]],[.35,[45,102,74]],[.62,[122,116,86]],[.85,[168,163,142]],[1,[235,238,240]]];
+  for(let i=1;i<stops.length;i++){
+    if(t<=stops[i][0]){
+      const t0=stops[i-1][0],c0=stops[i-1][1],t1=stops[i][0],c1=stops[i][1],k=(t-t0)/(t1-t0);
+      return [0,1,2].map(j=>Math.round(c0[j]+(c1[j]-c0[j])*k));
+    }
+  }
+  return stops[4][1];
+}
+function drawTerrain(seed){
+  const t1=buildTerrain(seed), t2=buildTerrain(seed);
+  const {h,res,perm}=t1;
+  const cv=$('tCanvas'), ctx=cv.getContext('2d');
+  const img=ctx.createImageData(cv.width,cv.height);
+  const px=Math.floor(cv.width/res);
+  const Lx=-0.58,Ly=-0.58,Lz=0.57;
+  for(let z=0;z<res;z++)for(let x=0;x<res;x++){
+    const idx=z*res+x;
+    const hl=h[z*res+Math.max(0,x-1)], hr=h[z*res+Math.min(res-1,x+1)];
+    const hu=h[Math.max(0,z-1)*res+x], hd=h[Math.min(res-1,z+1)*res+x];
+    let nx=(hl-hr)*8, ny=(hu-hd)*8, nz=1;
+    const nl=Math.hypot(nx,ny,nz); nx/=nl;ny/=nl;nz/=nl;
+    const sh=Math.max(0,nx*Lx+ny*Ly+nz*Lz);
+    const c=ramp(h[idx]); const f=.35+.65*sh;
+    for(let dy=0;dy<px;dy++)for(let dx=0;dx<px;dx++){
+      const o=(((z*px+dy)*cv.width)+(x*px+dx))*4;
+      img.data[o]=c[0]*f; img.data[o+1]=c[1]*f; img.data[o+2]=c[2]*f; img.data[o+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+  const pc=$('tPerm').getContext('2d');
+  for(let i=0;i<256;i++){
+    pc.fillStyle=`hsl(${(perm[i]*137)%360},55%,${Math.round(30+perm[i]/255*38)}%)`;
+    pc.fillRect(i,0,1,26);
+  }
+  const h1=fnv1a64(t1.h), h2=fnv1a64(t2.h);
+  $('tH1').textContent=h1.toString(16).toUpperCase().padStart(16,'0');
+  $('tH2').textContent=h2.toString(16).toUpperCase().padStart(16,'0');
+  $('tVerdict').innerHTML= h1===h2
+    ? '<span class="flag f-ok">✓ two runs share a bit-identical FNV-1a fingerprint — same seed ⇒ same terrain (controllability)</span>'
+    : '<span class="flag f-bad">✗ fingerprints differ (should never happen)</span>';
+}
+$('tGo').onclick=()=>drawTerrain(parseBig($('tSeed').value,1n));
+$('tRand').onclick=()=>{ $('tSeed').value=String(Math.floor(Math.random()*0x7FFFFFFF)); drawTerrain(parseBig($('tSeed').value,1n)); };
+
+/* ================= init ================= */
+smDraw(); kDraw(); mtInit(5489n); mtDetail(); tpDraw(); mersDraw(); drawTerrain(1n);
+</script>
+</body>
+</html>
