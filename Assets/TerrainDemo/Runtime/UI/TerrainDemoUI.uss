@@ -1,0 +1,52 @@
+/* Terrain demo panel styles. The structure lives in TerrainDemoUI.uxml;
+   everything visual is centralized here. The panel occupies the left quarter
+   of the screen at full height and scrolls when the controls overflow. */
+
+.demo-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 25%;
+    height: 100%;
+    min-width: 300px;
+    padding: 12px;
+    background-color: rgba(0, 0, 0, 0.78);
+    border-right-width: 1px;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.panel-scroll {
+    flex-grow: 1;
+}
+
+.title {
+    -unity-font-style: bold;
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.section-header {
+    -unity-font-style: bold;
+    margin-top: 10px;
+    margin-bottom: 4px;
+    color: rgb(150, 195, 255);
+}
+
+.button-row {
+    flex-direction: row;
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.button-row Button {
+    flex-grow: 1;
+}
+
+.button-row Button:hover {
+    background-color: rgb(72, 110, 168);
+}
+
+.stats {
+    margin-top: 10px;
+    white-space: normal;
+}

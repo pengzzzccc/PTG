@@ -1,0 +1,33 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="demo-panel" class="demo-panel">
+        <ui:Label text="Procedural Terrain Demo" name="title-label" class="title" />
+        <ui:ScrollView name="panel-scroll" class="panel-scroll">
+            <ui:IntegerField label="Seed" name="seed-field" />
+            <ui:VisualElement name="button-row" class="button-row">
+                <ui:Button text="Random Seed" name="random-button" />
+                <ui:Button text="Generate" name="generate-button" />
+            </ui:VisualElement>
+            <ui:DropdownField label="Preset" name="preset-field" />
+
+            <ui:Label text="— Terrain —" name="terrain-header" class="section-header" />
+            <ui:SliderInt label="Resolution" name="resolution-slider" low-value="33" high-value="513" show-input-field="true" />
+            <ui:Slider label="World Size (m)" name="world-size-slider" low-value="50" high-value="500" show-input-field="true" />
+            <ui:Slider label="Height Scale (m)" name="height-scale-slider" low-value="5" high-value="100" show-input-field="true" />
+
+            <ui:Label text="— Noise (Musgrave 1989 §3.3) —" name="noise-header" class="section-header" />
+            <ui:DropdownField label="Fractal Mode" name="mode-field" />
+            <ui:Slider label="Wavelength (m)" name="scale-slider" low-value="20" high-value="300" show-input-field="true" />
+            <ui:SliderInt label="Octaves" name="octaves-slider" low-value="1" high-value="12" show-input-field="true" />
+            <ui:Slider label="Lacunarity" name="lacunarity-slider" low-value="1.2" high-value="4" show-input-field="true" />
+            <ui:Slider label="Persistence" name="persistence-slider" low-value="0.05" high-value="0.95" show-input-field="true" />
+            <ui:Slider label="Feedback Offset" name="offset-slider" low-value="0" high-value="1.5" show-input-field="true" />
+            <ui:Slider label="Feedback Gain" name="gain-slider" low-value="0.5" high-value="4" show-input-field="true" />
+
+            <ui:Label text="— Shaping —" name="shaping-header" class="section-header" />
+            <ui:Slider label="Height Exponent" name="exponent-slider" low-value="0.5" high-value="4" show-input-field="true" />
+            <ui:SliderInt label="Terrace Levels" name="terrace-slider" low-value="0" high-value="64" show-input-field="true" />
+
+            <ui:Label text="No terrain generated yet" name="stats-label" class="stats" />
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>
