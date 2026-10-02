@@ -99,33 +99,4 @@ namespace TerrainDemo.Core
     }
 }
 
-// ── Implementation notes ─────────────────────────────────────────────────────
-//
-// Purpose. This step turns the "mathematical definition of noise" into "a concrete,
-// comparable table of data". The talk's pipeline reads: layered noise builds structure
-// and detail, the seed controls reproducibility, then the heightmap becomes a mesh.
-// This class is where the first two meet: input is only parameters, output is only
-// data, and no scene object is touched in between. Because input and output are both
-// pure data, "same seed + same parameters ⇒ bitwise identical heightmap" is directly
-// testable — this is where controllability stops being theory and becomes a fact.
-//
-// Principle. Both paths share the same front: a row-major double loop over
-// [Resolution, Resolution], converting grid indices to world coordinates (x, z) with
-// cell = WorldSize/(Resolution−1). The fixed-weight path samples the normalized fBm
-// directly; the feedback path samples the raw altitude accumulation and then normalizes
-// the whole map by its own min/max — the local-normalization pattern, required because
-// feedback values are unbounded and per-point normalization is impossible. Quantization
-// (terrace steps) and the power remap then apply as per-point 1D shapers that never
-// break determinism. Determinism overall rests on three layers: randomness only from
-// the seed-constructed noise instance, a fixed loop order, and bitwise-deterministic
-// float arithmetic throughout.
-//
-// Approach. The noise instance is built once outside the loops; the loops only sample.
-// The basic path is kept byte-identical to its pre-feedback form because existing
-// tests compare it bitwise. The shaping steps are duplicated across the two paths on
-// purpose: merging them into one shared pass would change the basic path's operation
-// order and break bitwise reproducibility for a purely cosmetic deduplication. At
-// large resolutions this step dominates memory and time (257² floats ≈ 260 KB,
-// milliseconds); if performance work ever starts, this is the first candidate to move
-// to the Job System, and the pure-function interface already reserves room for it.
-// ─────────────────────────────────────────────────────────────────────────────
+

@@ -240,26 +240,4 @@ namespace TerrainDemo
     }
 }
 
-// ── Implementation notes ─────────────────────────────────────────────────────
-//
-// Purpose. The panel is the demo's "experiment bench": every TerrainParams field is
-// exposed as a live control on the left quarter of the screen, so reproduction
-// experiments (same seed, same mountain), octave-cost measurements and parameter-space
-// exploration all happen in Play mode without touching the Inspector.
-//
-// Principle. Structure and styling stay in UXML/USS; this file only queries named
-// elements and wires behaviour. Controls never call Generate directly — they set the
-// dirty flag, and Update flushes at most every 0.3 s (RegenerateIntervalSeconds).
-// That converts a slider drag (which fires dozens of change events) into a short
-// series of full regenerations instead of one per dragged pixel, while feedback still
-// feels live at the demo's ~0.1 s generation cost. Presets flow the other way: the
-// preset's TerrainParams object replaces generator.Parameters and the controls mirror
-// it, so the controls are always a faithful view of the parameters that produced the
-// current mesh.
-//
-// Approach. Parameter sync lives in two symmetric methods (controls→parameters,
-// parameters→controls); adding a future parameter means adding it to UXML, the query,
-// and both sync methods — nothing else. The Generate button bypasses the throttle for
-// an immediate result, and the seed field participates in the same throttled path so
-// typing a new seed regenerates hands-free.
-// ─────────────────────────────────────────────────────────────────────────────
+
