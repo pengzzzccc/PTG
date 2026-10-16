@@ -1,52 +1,138 @@
-/* Terrain demo panel styles. The structure lives in TerrainDemoUI.uxml;
-   everything visual is centralized here. The panel occupies the left quarter
-   of the screen at full height and scrolls when the controls overflow. */
+/* Terrain demo panel styles.
+   Structure lives in TerrainDemoUI.uxml, behaviour in TerrainDemoUI.cs.
+   A semi-transparent black panel on the left holds two modules: the seed module
+   on top and the parameter module below (presets, sliders, Generate button).
+   The per-stage timings sit in a separate label in the top-right corner. */
+
+/* ── Panel shell ─────────────────────────────────────────────────────── */
 
 .demo-panel {
     position: absolute;
     top: 0;
     left: 0;
+    bottom: 0;
     width: 25%;
-    height: 100%;
     min-width: 300px;
     padding: 12px;
-    background-color: rgba(0, 0, 0, 0.78);
-    border-right-width: 1px;
-    border-color: rgba(255, 255, 255, 0.25);
+    background-color: rgba(0, 0, 0, 0.6);
+    color: rgb(235, 235, 235);
+}
+
+/* Every label inside the panel (field labels included) uses the light text color. */
+.demo-panel .unity-label {
+    color: rgb(235, 235, 235);
+}
+
+/* Input box*/
+.demo-panel .unity-base-text-field__input{
+    color: rgb(20, 20, 20);
+}
+
+/* Shared look for the two modules. */
+.module {
+    padding: 8px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* ── Module 1: seed ──────────────────────────────────────────────────── */
+
+.seed-module {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.seed-field {
+    flex-grow: 1;
+    margin-right: 6px;
+}
+
+.seed-field .unity-base-field__label {
+    min-width: 40px;
+}
+
+/* ── Module 2: parameters ────────────────────────────────────────────── */
+
+.param-module {
+    flex-grow: 1;
+}
+
+.preset-row {
+    flex-direction: row;
+    margin-bottom: 8px;
+}
+
+.preset-button {
+    flex-grow: 1;
+    flex-basis: 0;
+    font-size: 11px;
+    white-space: normal;
+}
+
+/* Highlight for the preset applied last. */
+.preset-button.preset-selected {
+    background-color: rgb(62, 108, 168);
+    border-color: rgb(120, 180, 255);
+    color: rgb(255, 255, 255);
 }
 
 .panel-scroll {
     flex-grow: 1;
 }
 
-.title {
-    -unity-font-style: bold;
-    font-size: 16px;
-    margin-bottom: 8px;
+.panel-scroll Slider,
+.panel-scroll SliderInt {
+    margin-top: 4px;
 }
 
-.section-header {
-    -unity-font-style: bold;
-    margin-top: 10px;
-    margin-bottom: 4px;
-    color: rgb(150, 195, 255);
+/* Align the label column so every slider's name starts at the same x. */
+.panel-scroll .unity-base-field__label {
+    min-width: 110px;
 }
 
-.button-row {
+.footer-row {
     flex-direction: row;
-    margin-top: 6px;
-    margin-bottom: 6px;
+    justify-content: flex-end;
+    margin-top: 8px;
 }
 
-.button-row Button {
-    flex-grow: 1;
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+
+.demo-panel Button {
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: rgb(235, 235, 235);
 }
 
-.button-row Button:hover {
-    background-color: rgb(72, 110, 168);
+.demo-panel Button:hover {
+    background-color: rgba(255, 255, 255, 0.22);
 }
+
+.demo-panel Button.generate-button {
+    min-width: 100px;
+    -unity-font-style: bold;
+    background-color: rgb(46, 110, 190);
+    border-color: rgb(120, 180, 255);
+}
+
+.demo-panel Button.generate-button:hover {
+    background-color: rgb(66, 135, 220);
+}
+
+/* ── Stats label (top-right corner) ──────────────────────────────────── */
 
 .stats {
-    margin-top: 10px;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 8px 10px;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 6px;
+    color: rgb(150, 210, 160);
+    font-size: 12px;
     white-space: normal;
 }

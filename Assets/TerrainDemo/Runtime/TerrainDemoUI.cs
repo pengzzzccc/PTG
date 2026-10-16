@@ -1,9 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// File: Runtime/TerrainDemoUI.cs
-// Module: Procedural terrain generation · Unity runtime
-// Status: Fully implemented (UI Toolkit; structure in UXML, styles in USS)
-// ─────────────────────────────────────────────────────────────────────────────
-
 using System.Collections.Generic;
 using TerrainDemo.Core;
 using UnityEngine;
@@ -11,50 +5,34 @@ using UnityEngine.UIElements;
 
 namespace TerrainDemo
 {
-    /// <summary>
-    /// Demo control panel (UI Toolkit): a full-height panel on the left quarter of the
-    /// screen exposing every TerrainParams field — seed, resolution, world size, the
-    /// octave stack, feedback parameters, shaping — plus presets, regeneration, per-stage
-    /// timings and FPS. The visual tree lives in TerrainDemoUI.uxml and the styles in
-    /// TerrainDemoUI.uss; this class queries the named elements, injects dropdown
-    /// choices, and wires callbacks. Slider edits only mark the pipeline dirty; Update
-    /// regenerates at most every ~0.3 s, so dragging stays smooth while feedback stays
-    /// near-live.
-    /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public class TerrainDemoUI : MonoBehaviour
     {
-        /// <summary>Terrain generator in the scene; every panel action ends in its Generate().</summary>
         [SerializeField] private TerrainGenerator generator;
 
-        /// <summary>Style sheet for the panel, assigned by DemoSceneBuilder (or the Inspector).</summary>
         [SerializeField] private StyleSheet panelStyleSheet;
 
-        /// <summary>Public accessor so the editor builder can wire the generator reference.</summary>
         public TerrainGenerator Generator
         {
             get => generator;
             set => generator = value;
         }
 
-        /// <summary>Public accessor for the panel style sheet.</summary>
         public StyleSheet PanelStyleSheet
         {
             get => panelStyleSheet;
             set => panelStyleSheet = value;
         }
 
-        private static readonly string[] PresetNames = { "Rolling Hills", "Rugged Peaks", "Terraced Mesas" };
-        private static readonly string[] ModeNames = { "Basic FBM", "Multifractal", "Ridged Multifractal" };
-
         private const float RegenerateIntervalSeconds = 0.3f;
 
-        // Controls, queried from UXML by name.
+        private const string PresetSelectedClass = "preset-selected";
+
         private IntegerField _seedField;
-        private DropdownField _presetField;
-        private DropdownField _modeField;
+        private Button _hillsButton;
+        private Button _peaksButton;
+        private Button _mesasButton;
         private SliderInt _resolutionSlider;
-        private Slider _worldSizeSlider;
         private Slider _heightScaleSlider;
         private Slider _scaleSlider;
         private SliderInt _octavesSlider;
@@ -65,6 +43,20 @@ namespace TerrainDemo
         private Slider _exponentSlider;
         private SliderInt _terraceSlider;
         private Label _statsLabel;
+
+        private sealed class Binding
+        {
+            public readonly System.Action<TerrainParams> ToParams;
+            public readonly System.Action<TerrainParams> ToControl;
+
+            public Binding(System.Action<TerrainParams> toParams, System.Action<TerrainParams> toControl)
+            {
+                ToParams = toParams;
+                ToControl = toControl;
+            }
+        }
+
+        private readonly List<Binding> _bindings = new List<Binding>();
 
         private bool _dirty;
         private float _lastGenerateTime;
@@ -79,16 +71,15 @@ namespace TerrainDemo
             if (panelStyleSheet != null) root.styleSheets.Add(panelStyleSheet);
 
             if (!QueryControls(root)) return;
+            WireSpecialControls(root);
+            BuildBindings();
             if (generator != null) CopyParametersToControls(generator.Parameters);
-            WireCallbacks(root);
         }
 
         private void Update()
         {
             if (generator == null) return;
 
-            // Throttled regeneration: slider drags only mark the pipeline dirty, Update
-            // flushes at most every RegenerateIntervalSeconds so dragging stays smooth.
             if (_dirty && Time.unscaledTime - _lastGenerateTime >= RegenerateIntervalSeconds)
             {
                 SyncParametersFromControls();
@@ -99,24 +90,19 @@ namespace TerrainDemo
 
             if (_statsLabel != null)
             {
-                // FPS: exponential smoothing over unscaled deltas — reacts to real
-                // changes without jittering every frame.
                 float dt = Time.unscaledDeltaTime;
                 if (dt > 0f) _fps = Mathf.Lerp(_fps, 1f / dt, 0.05f);
-                _statsLabel.text = generator.LastStageStats + "\nFPS " + _fps.ToString("F0");
+                _statsLabel.text = generator.LastStageStats.Replace(" | ", "\n") + "\nFPS " + _fps.ToString("F0");
             }
         }
 
-        // ── Wiring ──────────────────────────────────────────────────────────
-
-        /// <summary>Queries every named element from UXML; logs a warning listing anything missing.</summary>
         private bool QueryControls(VisualElement root)
         {
             _seedField = root.Q<IntegerField>("seed-field");
-            _presetField = root.Q<DropdownField>("preset-field");
-            _modeField = root.Q<DropdownField>("mode-field");
+            _hillsButton = root.Q<Button>("preset-hills");
+            _peaksButton = root.Q<Button>("preset-peaks");
+            _mesasButton = root.Q<Button>("preset-mesas");
             _resolutionSlider = root.Q<SliderInt>("resolution-slider");
-            _worldSizeSlider = root.Q<Slider>("world-size-slider");
             _heightScaleSlider = root.Q<Slider>("height-scale-slider");
             _scaleSlider = root.Q<Slider>("scale-slider");
             _octavesSlider = root.Q<SliderInt>("octaves-slider");
@@ -128,8 +114,9 @@ namespace TerrainDemo
             _terraceSlider = root.Q<SliderInt>("terrace-slider");
             _statsLabel = root.Q<Label>("stats-label");
 
-            bool complete = _seedField != null && _presetField != null && _modeField != null
-                && _resolutionSlider != null && _worldSizeSlider != null && _heightScaleSlider != null
+            bool complete = _seedField != null
+                && _hillsButton != null && _peaksButton != null && _mesasButton != null
+                && _resolutionSlider != null && _heightScaleSlider != null
                 && _scaleSlider != null && _octavesSlider != null && _lacunaritySlider != null
                 && _persistenceSlider != null && _offsetSlider != null && _gainSlider != null
                 && _exponentSlider != null && _terraceSlider != null && _statsLabel != null;
@@ -140,95 +127,72 @@ namespace TerrainDemo
             return complete;
         }
 
-        /// <summary>Injects dropdown choices and registers the change callbacks.</summary>
-        private void WireCallbacks(VisualElement root)
+        private void BuildBindings()
         {
-            _presetField.choices = new List<string>(PresetNames);
-            _presetField.index = 0;
-            _presetField.RegisterValueChangedCallback(_ =>
-            {
-                // Presets swap the whole parameter object, then the controls mirror it
-                // (each assignment fires a change callback that just re-raises dirty).
-                generator.Parameters = _presetField.index switch
-                {
-                    1 => TerrainParams.RuggedPeaks(),
-                    2 => TerrainParams.TerracedMesas(),
-                    _ => TerrainParams.RollingHills(),
-                };
-                CopyParametersToControls(generator.Parameters);
-                RequestRegenerate();
-            });
+            _bindings.Clear();
 
-            _modeField.choices = new List<string>(ModeNames);
-            _modeField.RegisterValueChangedCallback(_ => RequestRegenerate());
+            Bind(_seedField, (p, v) => p.Seed = v, p => p.Seed);
+            Bind(_resolutionSlider, (p, v) => p.Resolution = v, p => p.Resolution);
+            Bind(_heightScaleSlider, (p, v) => p.HeightScale = v, p => p.HeightScale);
+            Bind(_scaleSlider, (p, v) => p.Scale = v, p => p.Scale);
+            Bind(_octavesSlider, (p, v) => p.Octaves = v, p => p.Octaves);
+            Bind(_lacunaritySlider, (p, v) => p.Lacunarity = v, p => p.Lacunarity);
+            Bind(_persistenceSlider, (p, v) => p.Persistence = v, p => p.Persistence);
+            Bind(_offsetSlider, (p, v) => p.Offset = v, p => p.Offset);
+            Bind(_gainSlider, (p, v) => p.Gain = v, p => p.Gain);
+            Bind(_exponentSlider, (p, v) => p.HeightExponent = v, p => p.HeightExponent);
+            Bind(_terraceSlider, (p, v) => p.TerraceLevels = v, p => p.TerraceLevels);
+        }
+
+        private void Bind<TValue>(BaseField<TValue> field, System.Action<TerrainParams, TValue> set, System.Func<TerrainParams, TValue> get)
+        {
+            field.RegisterValueChangedCallback(_ => RequestRegenerate());
+            _bindings.Add(new Binding(
+                p => set(p, field.value),
+                p => field.SetValueWithoutNotify(get(p))));
+        }
+
+        private void WireSpecialControls(VisualElement root)
+        {
+            _hillsButton.clicked += () => ApplyPreset(TerrainParams.RollingHills(), _hillsButton);
+            _peaksButton.clicked += () => ApplyPreset(TerrainParams.RuggedPeaks(), _peaksButton);
+            _mesasButton.clicked += () => ApplyPreset(TerrainParams.TerracedMesas(), _mesasButton);
 
             Button randomButton = root.Q<Button>("random-button");
             Button generateButton = root.Q<Button>("generate-button");
             if (randomButton != null)
             {
-                // The randomness lives outside the pipeline, so the reproducibility
-                // contract ("same seed ⇒ same terrain") is untouched.
                 randomButton.clicked += () => _seedField.value = Random.Range(0, int.MaxValue);
             }
             if (generateButton != null) generateButton.clicked += ForceRegenerate;
-
-            // Every remaining control just marks the pipeline dirty; SyncParametersFromControls
-            // pulls the values, so each callback body stays identical.
-            _seedField.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _resolutionSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _worldSizeSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _heightScaleSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _scaleSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _octavesSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _lacunaritySlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _persistenceSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _offsetSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _gainSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _exponentSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
-            _terraceSlider.RegisterValueChangedCallback(_ => RequestRegenerate());
         }
 
-        /// <summary>Marks the pipeline dirty; Update flushes at most every 0.3 s.</summary>
+        private void ApplyPreset(TerrainParams preset, Button source)
+        {
+            if (generator == null) return;
+            generator.Parameters = preset;
+            CopyParametersToControls(preset);
+
+            _hillsButton.EnableInClassList(PresetSelectedClass, source == _hillsButton);
+            _peaksButton.EnableInClassList(PresetSelectedClass, source == _peaksButton);
+            _mesasButton.EnableInClassList(PresetSelectedClass, source == _mesasButton);
+
+            RequestRegenerate();
+        }
+
         private void RequestRegenerate() => _dirty = true;
 
-        /// <summary>Mirrors every control value back into generator.Parameters.</summary>
         private void SyncParametersFromControls()
         {
             TerrainParams p = generator.Parameters;
-            p.Seed = _seedField.value;
-            p.Mode = (FractalMode)_modeField.index;
-            p.Resolution = _resolutionSlider.value;
-            p.WorldSize = _worldSizeSlider.value;
-            p.HeightScale = _heightScaleSlider.value;
-            p.Scale = _scaleSlider.value;
-            p.Octaves = _octavesSlider.value;
-            p.Lacunarity = _lacunaritySlider.value;
-            p.Persistence = _persistenceSlider.value;
-            p.Offset = _offsetSlider.value;
-            p.Gain = _gainSlider.value;
-            p.HeightExponent = _exponentSlider.value;
-            p.TerraceLevels = _terraceSlider.value;
+            foreach (Binding binding in _bindings) binding.ToParams(p);
         }
 
-        /// <summary>Mirrors generator.Parameters into the controls (used on preset swaps).</summary>
         private void CopyParametersToControls(TerrainParams p)
         {
-            _seedField.value = p.Seed;
-            _modeField.index = (int)p.Mode;
-            _resolutionSlider.value = p.Resolution;
-            _worldSizeSlider.value = p.WorldSize;
-            _heightScaleSlider.value = p.HeightScale;
-            _scaleSlider.value = p.Scale;
-            _octavesSlider.value = p.Octaves;
-            _lacunaritySlider.value = p.Lacunarity;
-            _persistenceSlider.value = p.Persistence;
-            _offsetSlider.value = p.Offset;
-            _gainSlider.value = p.Gain;
-            _exponentSlider.value = p.HeightExponent;
-            _terraceSlider.value = p.TerraceLevels;
+            foreach (Binding binding in _bindings) binding.ToControl(p);
         }
 
-        /// <summary>Regenerates immediately with the current control values, bypassing the throttle.</summary>
         private void ForceRegenerate()
         {
             if (generator == null) return;
@@ -239,5 +203,3 @@ namespace TerrainDemo
         }
     }
 }
-
-

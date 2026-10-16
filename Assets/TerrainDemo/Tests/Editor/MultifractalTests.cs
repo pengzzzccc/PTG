@@ -1,9 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// File: Tests/Editor/MultifractalTests.cs
-// Module: Procedural terrain generation · Tests (Unity Test Framework, EditMode)
-// ─────────────────────────────────────────────────────────────────────────────
-
-
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
@@ -16,9 +10,6 @@ namespace TerrainDemo.Tests
     {
         private const float RangeEps = 1e-4f;
 
-        // ── Helpers ─────────────────────────────────────────────────────────
-
-        /// <summary>Builds a fully explicit parameter set with a chosen fractal mode.</summary>
         private static TerrainParams MakeParams(int seed, int resolution, FractalMode mode)
         {
             return new TerrainParams
@@ -36,7 +27,6 @@ namespace TerrainDemo.Tests
             };
         }
 
-        /// <summary>FNV-1a 64-bit hash over the bytes of every float in the map.</summary>
         private static string FnvHash(float[,] map)
         {
             const ulong offsetBasis = 14695981039346656037UL;
@@ -51,8 +41,6 @@ namespace TerrainDemo.Tests
                     }
             return hash.ToString("X16");
         }
-
-        // ── 1. Determinism and separation ───────────────────────────────────
 
         [Test]
         public void Multifractal_SameSeed_ReproducesValues()
@@ -79,15 +67,12 @@ namespace TerrainDemo.Tests
             for (int y = 0; y < 33; y++)
                 for (int x = 0; x < 33; x++)
                 {
-                    // Fractional stride so probes do not all land on integer lattice points.
                     float px = x * 2f + 0.37f, py = y * 2f + 0.53f;
                     maxDiff = Mathf.Max(maxDiff, Mathf.Abs(feedback.SampleRaw(px, py) - basic.Sample(px, py)));
                 }
             Debug.Log($"[Multifractal · mode separation] same seed=5, feedback vs fixed-weight over a 33×33 grid: max difference {maxDiff:F4} (required > 0.01)");
             Assert.Greater(maxDiff, 0.01f, "The feedback mode produced nearly the same values as fixed-weight fBm; the altitude feedback is not taking effect");
         }
-
-        // ── 2. The paper's core claim: roughness grows with altitude ────────
 
         [Test]
         public void Multifractal_DetailGrowsWithAltitude()
@@ -100,7 +85,6 @@ namespace TerrainDemo.Tests
                 for (int x = 0; x < samples; x++)
                     values[z, x] = noise.SampleRaw(x * span / (samples - 1), z * span / (samples - 1));
 
-            // Per-cell roughness via second differences (interior cells only).
             var cells = new List<(float value, float rough)>();
             for (int z = 1; z < samples - 1; z++)
                 for (int x = 1; x < samples - 1; x++)
@@ -124,8 +108,6 @@ namespace TerrainDemo.Tests
             Assert.Greater(highMean, 1.2 * lowMean,
                 "High-altitude cells are not rougher than low-altitude cells; the altitude feedback is not taking effect");
         }
-
-        // ── 3. Heightmap-level contracts for both feedback modes ────────────
 
         [Test]
         public void Heightmap_Multifractal_IsDeterministicAndInRange()
@@ -186,8 +168,6 @@ namespace TerrainDemo.Tests
             Debug.Log($"[Heightmap · variant separation] same seed=1234, Ridged vs Multifractal: max difference {maxDiff:F4} (required > 0.01)");
             Assert.Greater(maxDiff, 0.01f, "Ridged and plain Multifractal produced nearly identical maps; the ridge shaping is not taking effect");
         }
-
-        // ── 4. Preset smoke test ────────────────────────────────────────────
 
         [Test]
         public void RuggedPeaks_Preset_GeneratesInRange()

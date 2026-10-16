@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// File: Tests/Editor/TerrainGenTests.cs
-// Module: Procedural terrain generation · Tests (Unity Test Framework, EditMode)
-// ─────────────────────────────────────────────────────────────────────────────
-
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -15,14 +10,8 @@ namespace TerrainDemo.Tests
 {
     public class TerrainGenTests
     {
-        /// <summary>Uniform float tolerance for range-style assertions.</summary>
         private const float RangeEps = 1e-4f;
 
-        // ═════════════════════════════════════════════════════════════════════
-        // Helpers
-        // ═════════════════════════════════════════════════════════════════════
-
-        /// <summary>Builds a fully explicit parameter set (independent of defaults and presets).</summary>
         private static TerrainParams MakeParams(int seed, int resolution = 65)
         {
             return new TerrainParams
@@ -39,7 +28,6 @@ namespace TerrainDemo.Tests
             };
         }
 
-        /// <summary>FNV-1a 64-bit hash over the bytes of every float in the map, for bitwise determinism checks.</summary>
         private static string FnvHash(float[,] map)
         {
             const ulong offsetBasis = 14695981039346656037UL;
@@ -61,7 +49,6 @@ namespace TerrainDemo.Tests
             return hash.ToString("X16");
         }
 
-        /// <summary>Element-wise maximum absolute difference between two heightmaps.</summary>
         private static float MaxAbsDiff(float[,] a, float[,] b)
         {
             Assert.AreEqual(a.GetLength(0), b.GetLength(0), "Row counts differ; maps are not comparable");
@@ -73,7 +60,6 @@ namespace TerrainDemo.Tests
             return max;
         }
 
-        /// <summary>Deterministic synthetic heightmap for mesh tests (noise-independent, isolating the subject).</summary>
         private static float[,] SyntheticHeights(int resolution)
         {
             var heights = new float[resolution, resolution];
@@ -83,13 +69,6 @@ namespace TerrainDemo.Tests
             return heights;
         }
 
-        /// <summary>
-        /// "Second-difference energy" (discrete Laplacian) of an fBm grid:
-        /// the mean of |2·center − left − right| and its vertical twin. The second
-        /// difference responds to frequency as f², so it measures high-frequency content;
-        /// the first difference (∝f) is NOT monotonic in octaves under amplitude-sum
-        /// normalization and must not be used as a proxy.
-        /// </summary>
         private static double LaplacianEnergy(int octaves)
         {
             var noise = new FractalNoise2D(7, octaves, 2f, 0.5f, 4f);
@@ -111,10 +90,6 @@ namespace TerrainDemo.Tests
                 }
             return sum / count;
         }
-
-        // ═════════════════════════════════════════════════════════════════════
-        // 1. SeededRng: determinism, seed separation, range, uniformity
-        // ═════════════════════════════════════════════════════════════════════
 
         [Test]
         public void SeededRng_SameSeed_ReproducesIdenticalSequence()
@@ -178,10 +153,6 @@ namespace TerrainDemo.Tests
             Debug.Log($"[SeededRng · uniformity] mean of {n} draws = {mean:F4} (theory 0.5, tolerance ±0.05)");
             Assert.That(mean, Is.InRange(0.45, 0.55), "Sample mean deviates too far from 0.5; distribution may be biased");
         }
-
-        // ═════════════════════════════════════════════════════════════════════
-        // 2. PerlinNoise2D: range, lattice zeros, period, continuity, reproducibility, table
-        // ═════════════════════════════════════════════════════════════════════
 
         [Test]
         public void Perlin_ValuesStayInUnitRange()
@@ -309,8 +280,6 @@ namespace TerrainDemo.Tests
             for (int y = 0; y < 33; y++)
                 for (int x = 0; x < 33; x++)
                 {
-                    // Fractional stride so probes do not all land on integer lattice
-                    // points (where the value is always 0 and seeds cannot differ).
                     float px = x * 2f + 0.37f, py = y * 2f + 0.53f;
                     maxDiff = Mathf.Max(maxDiff, Mathf.Abs(noiseA.Noise(px, py) - noiseB.Noise(px, py)));
                 }
@@ -321,10 +290,6 @@ namespace TerrainDemo.Tests
             int[] permB = new PerlinNoise2D(4).Permutation;
             Assert.IsFalse(permA.SequenceEqual(permB), "Seeds 3 and 4 produced identical permutation tables");
         }
-
-        // ═════════════════════════════════════════════════════════════════════
-        // 3. FractalNoise2D: range, single-octave identity, octave effects, energy, reproducibility
-        // ═════════════════════════════════════════════════════════════════════
 
         [Test]
         public void Fbm_ValuesStayInUnitRange()
@@ -414,10 +379,6 @@ namespace TerrainDemo.Tests
             Debug.Log("[fBm · same seed] two identical instances bitwise equal at 5 probe points ✓");
         }
 
-        // ═════════════════════════════════════════════════════════════════════
-        // 4. HeightmapGenerator: end-to-end determinism, seed separation, size & range
-        // ═════════════════════════════════════════════════════════════════════
-
         [Test]
         public void Heightmap_SameSeed_IsBitwiseDeterministic()
         {
@@ -475,10 +436,6 @@ namespace TerrainDemo.Tests
             Assert.That(shapedMin, Is.InRange(-RangeEps, 1f + RangeEps), "Power remap produced an out-of-range value");
             Assert.That(shapedMax, Is.InRange(-RangeEps, 1f + RangeEps), "Power remap produced an out-of-range value");
         }
-
-        // ═════════════════════════════════════════════════════════════════════
-        // 5. MeshDataBuilder: counts, indices, vertex positions, winding, UVs
-        // ═════════════════════════════════════════════════════════════════════
 
         [Test]
         public void Mesh_Counts_AreCorrect()
