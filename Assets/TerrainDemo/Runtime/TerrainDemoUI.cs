@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TerrainDemo.Core;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 namespace TerrainDemo
@@ -27,6 +28,12 @@ namespace TerrainDemo
         private const float RegenerateIntervalSeconds = 0.3f;
 
         private const string PresetSelectedClass = "preset-selected";
+
+        private const string TextInputClass = "unity-base-text-field";
+
+        public static bool IsTyping { get; private set; }
+
+        private VisualElement _root;
 
         private IntegerField _seedField;
         private Button _hillsButton;
@@ -71,6 +78,8 @@ namespace TerrainDemo
             if (panelStyleSheet != null) root.styleSheets.Add(panelStyleSheet);
 
             if (!QueryControls(root)) return;
+            _root = root;
+            root.RegisterCallback<NavigationMoveEvent>(evt => evt.StopPropagation(), TrickleDown.TrickleDown);
             WireSpecialControls(root);
             BuildBindings();
             if (generator != null) CopyParametersToControls(generator.Parameters);
@@ -78,6 +87,7 @@ namespace TerrainDemo
 
         private void Update()
         {
+            UpdateFocus();
             if (generator == null) return;
 
             if (_dirty && Time.unscaledTime - _lastGenerateTime >= RegenerateIntervalSeconds)
@@ -94,6 +104,37 @@ namespace TerrainDemo
                 if (dt > 0f) _fps = Mathf.Lerp(_fps, 1f / dt, 0.05f);
                 _statsLabel.text = generator.LastStageStats.Replace(" | ", "\n") + "\nFPS " + _fps.ToString("F0");
             }
+        }
+
+        private void UpdateFocus()
+        {
+            FocusController focusController = _root?.focusController;
+            if (focusController == null)
+            {
+                IsTyping = false;
+                return;
+            }
+
+            Mouse mouse = Mouse.current;
+            if (mouse != null && mouse.rightButton.wasPressedThisFrame)
+            {
+                focusController.focusedElement?.Blur();
+            }
+
+            IsTyping = false;
+            for (VisualElement e = focusController.focusedElement as VisualElement; e != null; e = e.parent)
+            {
+                if (e.ClassListContains(TextInputClass))
+                {
+                    IsTyping = true;
+                    break;
+                }
+            }
+        }
+
+        private void OnDisable()
+        {
+            IsTyping = false;
         }
 
         private bool QueryControls(VisualElement root)

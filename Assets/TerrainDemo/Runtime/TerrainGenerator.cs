@@ -49,6 +49,7 @@ namespace TerrainDemo
             mesh.vertices = meshData.Vertices;
             mesh.triangles = meshData.Triangles;
             mesh.uv = meshData.UVs;
+            mesh.colors = meshData.colors;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             var collider = GetComponent<MeshCollider>();

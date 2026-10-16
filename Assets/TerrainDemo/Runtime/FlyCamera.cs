@@ -27,12 +27,15 @@ namespace TerrainDemo
             if (keyboard == null || mouse == null) return;
 
             Vector3 move = Vector3.zero;
-            if (keyboard.wKey.isPressed) move += transform.forward;
-            if (keyboard.sKey.isPressed) move -= transform.forward;
-            if (keyboard.dKey.isPressed) move += transform.right;
-            if (keyboard.aKey.isPressed) move -= transform.right;
-            if (keyboard.eKey.isPressed) move += Vector3.up;
-            if (keyboard.qKey.isPressed) move -= Vector3.up;
+            if (!TerrainDemoUI.IsTyping)
+            {
+                if (keyboard.wKey.isPressed) move += transform.forward;
+                if (keyboard.sKey.isPressed) move -= transform.forward;
+                if (keyboard.dKey.isPressed) move += transform.right;
+                if (keyboard.aKey.isPressed) move -= transform.right;
+                if (keyboard.eKey.isPressed) move += Vector3.up;
+                if (keyboard.qKey.isPressed) move -= Vector3.up;
+            }
             if (move.sqrMagnitude > 0f)
             {
                 transform.position += move.normalized * (moveSpeed * Time.deltaTime);
