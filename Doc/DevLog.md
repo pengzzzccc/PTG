@@ -57,7 +57,7 @@ Used Gemini along the way to look up C# syntax.
 (Permutation[j], Permutation[i]) = (Permutation[i], Permutation[j]);
 I did not know C# could swap array values directly like this. This is the first time I learned it. It is called "Tuple Swap", and the same style can also be used in Python, Rust, Go, and JavaScript/TypeScript.
 
-AI Use:
+**AI Use:**
 Gemini for C# syntax lookup only.
 
 
@@ -67,7 +67,15 @@ No progress at all this week. I was mainly busy with other things.
 
 
 ## 12/10/2026 - 18/10/2026
-### Total hours: 0h
+### Total hours: 5h
+This week I redid the UI panel, so all the parameter controls are much clearer now.
+Added a height color map that colors the terrain automatically based on height.
+Added the DevLog to the GitHub repo.
+Added skybox and lighting.
+
+**AI Use:**
+Claude Opus 5.5, fixed the UI input mix-up bug (I honestly could not figure this one out myself).
+In the end, the fix was a function on the UI root that catches the input, so the UI input gets locked while the camera is moving.
 
 
 
