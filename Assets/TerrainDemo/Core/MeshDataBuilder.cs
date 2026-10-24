@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TerrainDemo.Core
@@ -22,6 +23,10 @@ namespace TerrainDemo.Core
             float cell = parameters.WorldSize / (resolution - 1);
             int vertexCount = resolution * resolution;
 
+            List<ColorLayer> layers = parameters.ColorLayers;
+            if (layers == null || layers.Count == 0) layers = TerrainParams.DefaultColorLayers();
+            int layerCount = Mathf.Clamp(parameters.ColorCount, 1, layers.Count);
+
             var mesh = new MeshData
             {
                 Vertices = new Vector3[vertexCount],
@@ -42,7 +47,7 @@ namespace TerrainDemo.Core
                     mesh.UVs[index] = new Vector2(
                         x / (float)(resolution - 1),
                         z / (float)(resolution - 1));
-                    mesh.colors[index] = GetColor(heights, x, z, resolution, cell, parameters.HeightScale);
+                    mesh.colors[index] = GetColor(heights, x, z, resolution, cell, parameters.HeightScale, layers, layerCount);
                 }
             }
 
@@ -64,16 +69,10 @@ namespace TerrainDemo.Core
         }
 
 
-        private static Color DeepWater = new Color(0.00f, 0.24f, 0.55f);
-        private static Color Water = new Color(0.39f, 0.63f, 0.86f);
-        private static Color lightWater = new Color(0.78f, 0.78f, 1.00f);
-        private static Color Sand = new Color(0.76f, 0.70f, 0.50f);
-        private static Color Grass = new Color(0.30f, 0.50f, 0.20f);
-        private static Color Dirt = new Color(0.45f, 0.38f, 0.30f);
-        private static Color Snow = new Color(1.00f, 1.00f, 1.00f);
-        private static Color Rock = new Color(0.40f, 0.40f, 0.40f);
+        private const float EdgeWidth = 0.05f;
 
-        private static Color GetColor(float[,] heights, int x, int z, int resolution, float cell, float heightScale)
+        private static Color GetColor(float[,] heights, int x, int z, int resolution, float cell, float heightScale,
+            List<ColorLayer> layers, int layerCount)
         {
             //get height at four point
             float h = heights[z, x];
@@ -89,16 +88,22 @@ namespace TerrainDemo.Core
             Vector3 normal = new Vector3(-dx, 1f, -dz).normalized;
             float slop = 1f - normal.y;
 
-            // apply color
-            Color c = DeepWater;
-            c = Color.Lerp(c, Water, Mathf.SmoothStep(0f, 1f, (h - 0.06f) / 0.1f));
-            c = Color.Lerp(c, lightWater, Mathf.SmoothStep(0f, 1f, (h - 0.089f) / 0.1f));
-            c = Color.Lerp(c, Sand, Mathf.SmoothStep(0f, 1f, (h - 0.09f) / 0.1f));
-            c = Color.Lerp(c, Grass, Mathf.SmoothStep(0f, 1f, (h - 0.1f) / 0.1f));
-            c = Color.Lerp(c, Dirt, Mathf.SmoothStep(0f, 1f, (h - 0.55f) / 0.1f));
-            c = Color.Lerp(c, Snow, Mathf.SmoothStep(0f, 1f, (h - 0.75f) / 0.1f));
-            c = Color.Lerp(c, Rock, Mathf.SmoothStep(0f, 1f, (slop - 0.35f) / 0.1f));
+            Color c = layers[0].Color;
+            for (int i = 0; i < layerCount; i++)
+            {
+                ColorLayer layer = layers[i];
+                float weight = RangeWeight(h, layer.HeightMin, layer.HeightMax)
+                    * RangeWeight(slop, layer.SlopeMin, layer.SlopeMax);
+                c = Color.Lerp(c, layer.Color, weight);
+            }
             return c;
+        }
+
+        private static float RangeWeight(float value, float min, float max)
+        {
+            float low = min <= 0f ? 1f : Mathf.SmoothStep(0f, 1f, (value - min) / EdgeWidth + 0.5f);
+            float high = max >= 1f ? 1f : Mathf.SmoothStep(0f, 1f, (max - value) / EdgeWidth + 0.5f);
+            return low * high;
         }
     }
 }

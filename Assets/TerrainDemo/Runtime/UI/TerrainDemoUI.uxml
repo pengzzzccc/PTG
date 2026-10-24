@@ -31,5 +31,15 @@
         </ui:VisualElement>
     </ui:VisualElement>
 
+    <ui:VisualElement name="color-panel" class="demo-panel color-panel">
+        <ui:VisualElement name="color-count-module" class="module color-count-module">
+            <ui:SliderInt label="Colors" name="color-count-slider" low-value="1" high-value="8" show-input-field="true" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="color-module" class="module color-module">
+            <ui:ScrollView name="color-list" class="panel-scroll color-list" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
     <ui:Label text="No terrain generated yet" name="stats-label" class="stats" picking-mode="Ignore" />
 </ui:UXML>

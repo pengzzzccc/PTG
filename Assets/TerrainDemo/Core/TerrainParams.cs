@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TerrainDemo.Core
@@ -31,6 +32,35 @@ namespace TerrainDemo.Core
         public float Offset = 0.7f;
 
         public float Gain = 2f;
+
+        public const int MaxColorLayers = 8;
+
+        [Range(1, MaxColorLayers)] public int ColorCount = MaxColorLayers;
+
+        public List<ColorLayer> ColorLayers = DefaultColorLayers();
+
+        public static List<ColorLayer> DefaultColorLayers()
+        {
+            return new List<ColorLayer>
+            {
+                new ColorLayer(new Color(0.00f, 0.24f, 0.55f), 0.00f, 0.08f),
+                new ColorLayer(new Color(0.39f, 0.63f, 0.86f), 0.08f, 0.12f),
+                new ColorLayer(new Color(0.78f, 0.78f, 1.00f), 0.12f, 0.15f),
+                new ColorLayer(new Color(0.76f, 0.70f, 0.50f), 0.15f, 0.20f),
+                new ColorLayer(new Color(0.30f, 0.50f, 0.20f), 0.20f, 0.55f),
+                new ColorLayer(new Color(0.45f, 0.38f, 0.30f), 0.55f, 0.75f),
+                new ColorLayer(new Color(1.00f, 1.00f, 1.00f), 0.75f, 1.00f),
+                new ColorLayer(new Color(0.40f, 0.40f, 0.40f), 0.00f, 1.00f, 0.35f, 1.00f),
+            };
+        }
+
+        public void EnsureColorLayers()
+        {
+            List<ColorLayer> defaults = DefaultColorLayers();
+            if (ColorLayers == null) ColorLayers = new List<ColorLayer>();
+            for (int i = ColorLayers.Count; i < MaxColorLayers; i++) ColorLayers.Add(defaults[i]);
+            ColorCount = Mathf.Clamp(ColorCount, 1, MaxColorLayers);
+        }
 
         public static TerrainParams RollingHills()
         {

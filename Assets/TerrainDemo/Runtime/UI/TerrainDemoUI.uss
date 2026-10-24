@@ -123,12 +123,66 @@
     background-color: rgb(66, 135, 220);
 }
 
-/* ── Stats label (top-right corner) ──────────────────────────────────── */
+.demo-panel.color-panel {
+    left: auto;
+    right: 0;
+}
+
+.color-count-module {
+    margin-bottom: 10px;
+}
+
+.color-count-module .unity-base-field__label {
+    min-width: 60px;
+}
+
+.color-module {
+    flex-grow: 1;
+}
+
+.color-card {
+    margin-bottom: 8px;
+    padding: 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.color-card-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.color-card-title {
+    flex-grow: 1;
+    -unity-font-style: bold;
+}
+
+.color-swatch {
+    width: 18px;
+    height: 18px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.6);
+    border-radius: 3px;
+}
+
+.color-list .unity-base-field__label {
+    min-width: 60px;
+}
+
+.color-list MinMaxSlider {
+    margin-top: 4px;
+}
+
+/* ── Stats label (bottom centre) ─────────────────────────────────────── */
 
 .stats {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    bottom: 12px;
+    left: 50%;
+    translate: -50% 0;
     padding: 8px 10px;
     background-color: rgba(0, 0, 0, 0.6);
     border-radius: 6px;

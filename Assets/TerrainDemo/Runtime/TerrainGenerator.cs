@@ -2,6 +2,7 @@ using System.Text;
 using System.Diagnostics;
 using TerrainDemo.Core;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace TerrainDemo
 {
@@ -46,6 +47,7 @@ namespace TerrainDemo
             }
             Mesh mesh = meshFilter.sharedMesh;
             mesh.Clear();
+            mesh.indexFormat = meshData.Vertices.Length > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
             mesh.vertices = meshData.Vertices;
             mesh.triangles = meshData.Triangles;
             mesh.uv = meshData.UVs;

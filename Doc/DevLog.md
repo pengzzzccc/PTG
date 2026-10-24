@@ -78,5 +78,19 @@ Claude Opus 5.5, fixed the UI input mix-up bug (I honestly could not figure this
 In the end, the fix was a function on the UI root that catches the input, so the UI input gets locked while the camera is moving.
 
 
+## 19/10/2026 - 25/10/2026
+### Total hours: 14h
+This week I add color panel, users can now color the ground by using the color panel.
+
+Fixed a bug where increasing the resolution caused the terrain to shrink; the project’s default mesh generation process used 16-bit indexing, which limited each mesh to a maximum of 65,535 vertices.
+
+```
+mesh.indexFormat = meshData.Vertices.Length > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
+```
+
+Compare based on the number of vertices and use a larger data format.
+
+The evaluation direction and plan were defined this week; for further details, please refer to the Final Project Report.
+
 
 

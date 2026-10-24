@@ -50,6 +50,21 @@ namespace TerrainDemo
         private Slider _exponentSlider;
         private SliderInt _terraceSlider;
         private Label _statsLabel;
+        private SliderInt _colorCountSlider;
+        private ScrollView _colorList;
+
+        private sealed class ColorCard
+        {
+            public VisualElement Root;
+            public VisualElement Swatch;
+            public Slider R;
+            public Slider G;
+            public Slider B;
+            public MinMaxSlider Height;
+            public MinMaxSlider Slope;
+        }
+
+        private readonly List<ColorCard> _colorCards = new List<ColorCard>();
 
         private sealed class Binding
         {
@@ -80,7 +95,9 @@ namespace TerrainDemo
             if (!QueryControls(root)) return;
             _root = root;
             root.RegisterCallback<NavigationMoveEvent>(evt => evt.StopPropagation(), TrickleDown.TrickleDown);
+            BuildColorCards();
             WireSpecialControls(root);
+            if (generator != null) generator.Parameters.EnsureColorLayers();
             BuildBindings();
             if (generator != null) CopyParametersToControls(generator.Parameters);
         }
@@ -102,7 +119,7 @@ namespace TerrainDemo
             {
                 float dt = Time.unscaledDeltaTime;
                 if (dt > 0f) _fps = Mathf.Lerp(_fps, 1f / dt, 0.05f);
-                _statsLabel.text = generator.LastStageStats.Replace(" | ", "\n") + "\nFPS " + _fps.ToString("F0");
+                _statsLabel.text = generator.LastStageStats + " | FPS " + _fps.ToString("F0");
             }
         }
 
@@ -154,8 +171,11 @@ namespace TerrainDemo
             _exponentSlider = root.Q<Slider>("exponent-slider");
             _terraceSlider = root.Q<SliderInt>("terrace-slider");
             _statsLabel = root.Q<Label>("stats-label");
+            _colorCountSlider = root.Q<SliderInt>("color-count-slider");
+            _colorList = root.Q<ScrollView>("color-list");
 
             bool complete = _seedField != null
+                && _colorCountSlider != null && _colorList != null
                 && _hillsButton != null && _peaksButton != null && _mesasButton != null
                 && _resolutionSlider != null && _heightScaleSlider != null
                 && _scaleSlider != null && _octavesSlider != null && _lacunaritySlider != null
@@ -183,6 +203,91 @@ namespace TerrainDemo
             Bind(_gainSlider, (p, v) => p.Gain = v, p => p.Gain);
             Bind(_exponentSlider, (p, v) => p.HeightExponent = v, p => p.HeightExponent);
             Bind(_terraceSlider, (p, v) => p.TerraceLevels = v, p => p.TerraceLevels);
+
+            Bind(_colorCountSlider, (p, v) => p.ColorCount = v, p => p.ColorCount);
+            _colorCountSlider.RegisterValueChangedCallback(_ => RefreshColorCards());
+
+            for (int i = 0; i < _colorCards.Count; i++)
+            {
+                int index = i;
+                ColorCard card = _colorCards[i];
+
+                Bind(card.R, (p, v) => p.ColorLayers[index].Color.r = v, p => p.ColorLayers[index].Color.r);
+                Bind(card.G, (p, v) => p.ColorLayers[index].Color.g = v, p => p.ColorLayers[index].Color.g);
+                Bind(card.B, (p, v) => p.ColorLayers[index].Color.b = v, p => p.ColorLayers[index].Color.b);
+                Bind(card.Height,
+                    (p, v) =>
+                    {
+                        p.ColorLayers[index].HeightMin = v.x;
+                        p.ColorLayers[index].HeightMax = v.y;
+                    },
+                    p => new Vector2(p.ColorLayers[index].HeightMin, p.ColorLayers[index].HeightMax));
+                Bind(card.Slope,
+                    (p, v) =>
+                    {
+                        p.ColorLayers[index].SlopeMin = v.x;
+                        p.ColorLayers[index].SlopeMax = v.y;
+                    },
+                    p => new Vector2(p.ColorLayers[index].SlopeMin, p.ColorLayers[index].SlopeMax));
+
+                card.R.RegisterValueChangedCallback(_ => RefreshSwatch(card));
+                card.G.RegisterValueChangedCallback(_ => RefreshSwatch(card));
+                card.B.RegisterValueChangedCallback(_ => RefreshSwatch(card));
+            }
+        }
+
+        private void BuildColorCards()
+        {
+            _colorList.Clear();
+            _colorCards.Clear();
+
+            for (int i = 0; i < TerrainParams.MaxColorLayers; i++)
+            {
+                var card = new ColorCard
+                {
+                    Root = new VisualElement(),
+                    Swatch = new VisualElement(),
+                    R = new Slider("R", 0f, 1f) { showInputField = true },
+                    G = new Slider("G", 0f, 1f) { showInputField = true },
+                    B = new Slider("B", 0f, 1f) { showInputField = true },
+                    Height = new MinMaxSlider("Height", 0f, 1f, 0f, 1f),
+                    Slope = new MinMaxSlider("Slope", 0f, 1f, 0f, 1f),
+                };
+
+                var header = new VisualElement();
+                header.AddToClassList("color-card-header");
+                var title = new Label($"Color {i + 1}");
+                title.AddToClassList("color-card-title");
+                card.Swatch.AddToClassList("color-swatch");
+                header.Add(title);
+                header.Add(card.Swatch);
+
+                card.Root.AddToClassList("color-card");
+                card.Root.Add(header);
+                card.Root.Add(card.R);
+                card.Root.Add(card.G);
+                card.Root.Add(card.B);
+                card.Root.Add(card.Height);
+                card.Root.Add(card.Slope);
+
+                _colorList.Add(card.Root);
+                _colorCards.Add(card);
+            }
+        }
+
+        private void RefreshColorCards()
+        {
+            int count = _colorCountSlider.value;
+            for (int i = 0; i < _colorCards.Count; i++)
+            {
+                _colorCards[i].Root.style.display = i < count ? DisplayStyle.Flex : DisplayStyle.None;
+                RefreshSwatch(_colorCards[i]);
+            }
+        }
+
+        private static void RefreshSwatch(ColorCard card)
+        {
+            card.Swatch.style.backgroundColor = new Color(card.R.value, card.G.value, card.B.value);
         }
 
         private void Bind<TValue>(BaseField<TValue> field, System.Action<TerrainParams, TValue> set, System.Func<TerrainParams, TValue> get)
@@ -211,6 +316,9 @@ namespace TerrainDemo
         private void ApplyPreset(TerrainParams preset, Button source)
         {
             if (generator == null) return;
+            preset.ColorCount = generator.Parameters.ColorCount;
+            preset.ColorLayers = generator.Parameters.ColorLayers;
+            preset.EnsureColorLayers();
             generator.Parameters = preset;
             CopyParametersToControls(preset);
 
@@ -232,6 +340,7 @@ namespace TerrainDemo
         private void CopyParametersToControls(TerrainParams p)
         {
             foreach (Binding binding in _bindings) binding.ToControl(p);
+            RefreshColorCards();
         }
 
         private void ForceRegenerate()
