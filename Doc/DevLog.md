@@ -93,4 +93,12 @@ Compare based on the number of vertices and use a larger data format.
 The evaluation direction and plan were defined this week; for further details, please refer to the Final Project Report.
 
 
+## 26/10/2026 - 01/11/2026
+### Total hours: 
+This week, I created a PrefLog utility for performance evaluation; it records the time taken for each step during terrain generation (measured in milliseconds). Initial analysis revealed three primary performance bottlenecks: heightmap generation, mesh data generation, and collider generation. Furthermore, the performance cost increases exponentially with the resolution, as all three processes have a time complexity of O(n²).
+
+To address this, I plan to implement multi-core parallel processing (utilizing the CPU), remove unnecessary collider generation, and cache the heightmaps to accelerate color-filling operations.
+
+
+
 

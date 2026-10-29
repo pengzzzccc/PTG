@@ -3,6 +3,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UIElements;
+using TerrainDemo;
 
 namespace TerrainDemo.Editor
 {
@@ -19,7 +20,7 @@ namespace TerrainDemo.Editor
         {
             Cleanup();
 
-            GameObject terrain = new GameObject(TerrainName, typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider), typeof(TerrainGenerator));
+            GameObject terrain = new GameObject(TerrainName, typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider), typeof(TerrainGenerator), typeof(PerfLog));
             Undo.RegisterCreatedObjectUndo(terrain, "Setup Terrain Demo");
             Shader litShader = Shader.Find("Universal Render Pipeline/Lit");
             terrain.GetComponent<MeshRenderer>().sharedMaterial =

@@ -685,6 +685,7 @@ GameObject:
   - component: {fileID: 2056063568}
   - component: {fileID: 2056063567}
   - component: {fileID: 2056063566}
+  - component: {fileID: 2056063571}
   m_Layer: 0
   m_Name: TerrainDemo_Terrain
   m_TagString: Untagged
@@ -718,6 +719,48 @@ MonoBehaviour:
     Mode: 0
     Offset: 0.7
     Gain: 2
+    ColorCount: 8
+    ColorLayers:
+    - Color: {r: 0, g: 0.24, b: 0.55, a: 1}
+      HeightMin: 0
+      HeightMax: 0.08
+      SlopeMin: 0
+      SlopeMax: 1
+    - Color: {r: 0.39, g: 0.63, b: 0.86, a: 1}
+      HeightMin: 0.08
+      HeightMax: 0.12
+      SlopeMin: 0
+      SlopeMax: 1
+    - Color: {r: 0.78, g: 0.78, b: 1, a: 1}
+      HeightMin: 0.12
+      HeightMax: 0.15
+      SlopeMin: 0
+      SlopeMax: 1
+    - Color: {r: 0.76, g: 0.7, b: 0.5, a: 1}
+      HeightMin: 0.15
+      HeightMax: 0.2
+      SlopeMin: 0
+      SlopeMax: 1
+    - Color: {r: 0.3, g: 0.5, b: 0.2, a: 1}
+      HeightMin: 0.2
+      HeightMax: 0.55
+      SlopeMin: 0
+      SlopeMax: 1
+    - Color: {r: 0.45, g: 0.38, b: 0.3, a: 1}
+      HeightMin: 0.55
+      HeightMax: 0.75
+      SlopeMin: 0
+      SlopeMax: 1
+    - Color: {r: 1, g: 1, b: 1, a: 1}
+      HeightMin: 0.75
+      HeightMax: 1
+      SlopeMin: 0
+      SlopeMax: 1
+    - Color: {r: 0.4, g: 0.4, b: 0.4, a: 1}
+      HeightMin: 0
+      HeightMax: 1
+      SlopeMin: 0.35
+      SlopeMax: 1
   LastStageStats: Noise 0.2ms | Heightmap 25.9ms (257x257) | Mesh 1.7ms | Apply 33.7ms
 --- !u!64 &2056063567
 MeshCollider:
@@ -809,6 +852,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2056063571
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056063565}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: baf17c9b9df9fe54f891215d4e059e6c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  logEnabled: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
