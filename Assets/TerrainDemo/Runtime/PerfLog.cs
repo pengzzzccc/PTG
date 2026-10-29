@@ -61,8 +61,8 @@ namespace TerrainDemo
             _writer.WriteLine($"# cpu={SystemInfo.processorType} cores={SystemInfo.processorCount} sysMemMB={SystemInfo.systemMemorySize}");
             _writer.WriteLine($"# gpu={SystemInfo.graphicsDeviceName} os={SystemInfo.operatingSystem}"
                 + $" quality={QualitySettings.names[QualitySettings.GetQualityLevel()]}");
-            _writer.WriteLine("time_s,frame,seed,resolution,vertices,mode,octaves,color_count,"
-                + "height_ms,mesh_ms,upload_ms,normals_ms,bounds_ms,collider_ms,total_ms");
+            _writer.WriteLine("time_s,frame,seed,resolution,vertices,mode,octaves,color_count,path,"
+                + "height_ms,mesh_ms,color_ms,upload_ms,normals_ms,bounds_ms,total_ms");
         }
 
         private void WriteRow()
@@ -79,12 +79,13 @@ namespace TerrainDemo
                 p.Mode.ToString(),
                 p.Octaves.ToString(CultureInfo.InvariantCulture),
                 p.ColorCount.ToString(CultureInfo.InvariantCulture),
+                _generator.LastWasRecolor ? "color" : "full",
                 F(_generator.HeightMs),
                 F(_generator.MeshMs),
+                F(_generator.ColorMs),
                 F(_generator.UploadMs),
                 F(_generator.NormalsMs),
                 F(_generator.BoundsMs),
-                F(_generator.ColliderMs),
                 F(_generator.TotalMs)));
         }
 

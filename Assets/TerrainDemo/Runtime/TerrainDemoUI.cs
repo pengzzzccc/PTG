@@ -347,7 +347,7 @@ namespace TerrainDemo
         {
             if (generator == null) return;
             SyncParametersFromControls();
-            generator.Generate();
+            generator.Generate(true);
             _dirty = false;
             _lastGenerateTime = Time.unscaledTime;
         }

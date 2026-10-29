@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PTG Perf Compare</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --good: #006300;
+  --bad: #b42323;
+  --accent: #2a78d6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --good: #0ca30c;
+    --bad: #e66767;
+    --accent: #3987e5;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.10);
+  --good: #0ca30c;
+  --bad: #e66767;
+  --accent: #3987e5;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-size: 22px; margin: 0; }
+h2 { font-size: 16px; margin: 0 0 4px; }
+.sub { color: var(--text-secondary); margin: 4px 0 0; }
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.note { color: var(--text-muted); font-size: 12px; margin: 4px 0 0; }
+button, select, input[type="text"], input[type="number"] {
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 9px;
+}
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+
+#drop {
+  border: 2px dashed var(--axis);
+  border-radius: 10px;
+  padding: 22px;
+  text-align: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+#drop.over { border-color: var(--accent); color: var(--text-primary); }
+
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--text-secondary); font-weight: 600; font-size: 12px; }
+tr.total td { font-weight: 700; }
+.table-wrap { overflow-x: auto; }
+.runs td input[type="text"] { width: 100%; min-width: 140px; }
+.runs th, .runs td { text-align: left; }
+.runs td.num, .runs th.num { text-align: right; }
+#cmpTable th:nth-child(2), #cmpTable td:nth-child(2) { text-align: left; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+.good { color: var(--good); }
+.bad { color: var(--bad); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.filters label { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.tile { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--surface-1); }
+.tile .label { color: var(--text-secondary); font-size: 12px; }
+.tile .value { font-size: 26px; font-weight: 700; margin-top: 2px; }
+.tile .detail { color: var(--text-secondary); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0 4px; color: var(--text-secondary); font-size: 12px; }
+.chart { width: 100%; overflow: visible; }
+.chart text { fill: var(--text-secondary); font-size: 11px; font-family: inherit; }
+.chart .tick line { stroke: var(--grid); }
+.chart .axis { stroke: var(--axis); }
+.chart .strong { fill: var(--text-primary); font-weight: 600; }
+
+#tip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  display: none;
+  z-index: 10;
+  max-width: 280px;
+  font-variant-numeric: tabular-nums;
+}
+#tip .t { font-weight: 700; margin-bottom: 2px; }
+.empty { color: var(--text-muted); padding: 24px 0; text-align: center; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>PTG Performance Compare</h1>
+      <p class="sub">Drop PerfLog CSV files from <code>Evaluation/logs/</code> to compare generation timings between runs.</p>
+    </div>
+    <button id="themeBtn" type="button">Toggle theme</button>
+  </header>
+
+  <section class="card">
+    <div id="drop" tabindex="0">Drop CSV files here, or click to choose files
+      <input id="fileInput" type="file" accept=".csv,text/csv" multiple hidden>
+    </div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table class="runs" id="runsTable"></table>
+    </div>
+    <p class="note">Each file is one run. Rename runs (e.g. "Before", "After") to label the charts. Old-format logs (with <code>collider_ms</code>, no <code>color_ms</code>) count colouring inside Mesh.</p>
+  </section>
+
+  <section class="card">
+    <div class="filters">
+      <label>Baseline <select id="baseSel"></select></label>
+      <label>Compare <select id="cmpSel"></select></label>
+      <label>Mode <select id="modeSel"></select></label>
+      <label>Path <select id="pathSel"></select></label>
+      <label>Colours <select id="colorSel"></select></label>
+      <label>Min samples <input id="minN" type="number" min="1" value="3" style="width:64px"></label>
+      <label><input id="mergeChk" type="checkbox" checked> Merge Mesh + Color</label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Summary</h2>
+    <p class="note">Mean total generation time per resolution, baseline vs compare.</p>
+    <div class="tiles" id="tiles" style="margin-top:10px"></div>
+  </section>
+
+  <section class="card">
+    <h2>Stage breakdown</h2>
+    <p class="note">Mean time per stage (ms). One bar per run, grouped by resolution. Hover a segment for details.</p>
+    <div class="legend" id="stageLegend"></div>
+    <div id="breakdown"></div>
+  </section>
+
+  <section class="card">
+    <h2>Scaling with vertex count</h2>
+    <p class="note">Total time per generation. Faint dots are single generations; the line joins the per-resolution means. Up to three runs are drawn.</p>
+    <div class="legend" id="runLegend"></div>
+    <div id="scaling"></div>
+  </section>
+
+  <section class="card">
+    <h2>Comparison table</h2>
+    <p class="note">Mean ± standard deviation (n). Negative Δ means the compare run is faster.</p>
+    <div class="table-wrap" id="cmpTable"></div>
+    <div class="row-actions">
+      <button id="copyMd" type="button">Copy as Markdown</button>
+      <button id="copyCsv" type="button">Copy as CSV</button>
+      <span class="note" id="copyMsg"></span>
+    </div>
+  </section>
+</main>
+<div id="tip"></div>
+
+<script>
+const STAGES = [
+  { key: "height", label: "Height", slot: 1 },
+  { key: "mesh", label: "Mesh", slot: 2 },
+  { key: "color", label: "Color", slot: 3 },
+  { key: "upload", label: "Upload", slot: 4 },
+  { key: "normals", label: "Normals", slot: 5 },
+  { key: "bounds", label: "Bounds", slot: 6 },
+  { key: "collider", label: "Collider", slot: 7 },
+];
+const MAX_SCATTER_RUNS = 3;
+
+const state = { runs: [], nextSlot: 1 };
+const $ = id => document.getElementById(id);
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = (v, d = 1) => Number.isFinite(v) ? v.toFixed(d) : "–";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function parseCsv(text, fileName) {
+  const meta = [];
+  let header = null;
+  const rows = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith("#")) { meta.push(line.slice(1).trim()); continue; }
+    const cells = line.split(",");
+    if (!header) { header = cells.map(c => c.trim()); continue; }
+    const r = {};
+    header.forEach((h, i) => { r[h] = cells[i]; });
+    rows.push(r);
+  }
+  if (!header || !header.includes("total_ms")) throw new Error(`${fileName}: not a PerfLog CSV`);
+  const oldFormat = !header.includes("color_ms");
+  const num = (r, k) => (r[k] === undefined || r[k] === "") ? 0 : parseFloat(r[k]);
+  const records = rows.map(r => ({
+    resolution: parseInt(r.resolution, 10),
+    vertices: parseInt(r.vertices, 10),
+    mode: r.mode || "?",
+    path: r.path || "full",
+    colorCount: r.color_count !== undefined ? parseInt(r.color_count, 10) : NaN,
+    seed: r.seed,
+    height: num(r, "height_ms"),
+    mesh: num(r, "mesh_ms"),
+    color: num(r, "color_ms"),
+    upload: num(r, "upload_ms"),
+    normals: num(r, "normals_ms"),
+    bounds: num(r, "bounds_ms"),
+    collider: num(r, "collider_ms"),
+    total: num(r, "total_ms"),
+  })).filter(r => Number.isFinite(r.resolution) && Number.isFinite(r.total));
+  return { meta, records, oldFormat };
+}
+
+function addRun(fileName, text) {
+  let parsed;
+  try { parsed = parseCsv(text, fileName); }
+  catch (e) { alert(e.message); return; }
+  const slot = state.nextSlot <= 8 ? state.nextSlot++ : 8;
+  state.runs.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()),
+    name: fileName.replace(/\.csv$/i, ""),
+    fileName,
+    slot,
+    include: true,
+    ...parsed,
+  });
+}
+
+function readFiles(files) {
+  const list = [...files].filter(f => /\.csv$/i.test(f.name));
+  list.sort((a, b) => a.name.localeCompare(b.name));
+  Promise.all(list.map(f => f.text().then(t => [f.name, t]))).then(pairs => {
+    pairs.forEach(([n, t]) => addRun(n, t));
+    refresh();
+    const series = seriesList();
+    if (series.length >= 2 && !$("baseSel").dataset.touched) {
+      $("baseSel").value = series[0].id;
+      $("cmpSel").value = series[series.length - 1].id;
+      refresh();
+    }
+  });
+}
+
+function filteredRecords(run) {
+  const mode = $("modeSel").value;
+  const path = $("pathSel").value;
+  const colors = $("colorSel").value;
+  return run.records.filter(r =>
+    (mode === "*" || r.mode === mode) &&
+    (path === "*" || r.path === path) &&
+    (colors === "*" || String(r.colorCount) === colors));
+}
+
+function stagesInUse() {
+  const merge = $("mergeChk").checked;
+  return STAGES.filter(s => !(merge && s.key === "color")).map(s => ({
+    ...s,
+    label: merge && s.key === "mesh" ? "Mesh + Color" : s.label,
+  }));
+}
+
+function stageValue(r, key) {
+  if ($("mergeChk").checked && key === "mesh") return r.mesh + r.color;
+  return r[key];
+}
+
+function stats(values) {
+  const n = values.length;
+  if (!n) return { n: 0, mean: NaN, sd: NaN };
+  const mean = values.reduce((a, b) => a + b, 0) / n;
+  const sd = n > 1 ? Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1)) : 0;
+  return { n, mean, sd };
+}
+
+function groupByResolution(records) {
+  const map = new Map();
+  for (const r of records) {
+    if (!map.has(r.resolution)) map.set(r.resolution, []);
+    map.get(r.resolution).push(r);
+  }
+  return map;
+}
+
+function summarize(run) {
+  const minN = Math.max(1, parseInt($("minN").value, 10) || 1);
+  const out = new Map();
+  for (const [res, recs] of groupByResolution(filteredRecords(run))) {
+    if (recs.length < minN) continue;
+    const s = { resolution: res, vertices: recs[0].vertices, n: recs.length, stages: {}, total: stats(recs.map(r => r.total)) };
+    for (const st of STAGES) s.stages[st.key] = stats(recs.map(r => stageValue(r, st.key)));
+    out.set(res, s);
+  }
+  return out;
+}
+
+function niceStep(max, target) {
+  const raw = max / target;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / pow;
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * pow;
+}
+
+function svgEl(tag, attrs, parent) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+
+function roundedEnd(x, y, w, h, r) {
+  r = Math.min(r, w, h / 2);
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+}
+
+const tip = $("tip");
+function showTip(evt, html) {
+  tip.innerHTML = html;
+  tip.style.display = "block";
+  const pad = 14;
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  const rect = tip.getBoundingClientRect();
+  if (x + rect.width > window.innerWidth - 8) x = evt.clientX - rect.width - pad;
+  if (y + rect.height > window.innerHeight - 8) y = evt.clientY - rect.height - pad;
+  tip.style.left = x + "px";
+  tip.style.top = y + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+
+function includedRuns() { return state.runs.filter(r => r.include); }
+
+function seriesList() {
+  const map = new Map();
+  for (const run of includedRuns()) {
+    const key = run.name.trim() || run.fileName;
+    if (!map.has(key)) map.set(key, { id: key, name: key, slot: run.slot, records: [], files: 0 });
+    const s = map.get(key);
+    s.records.push(...run.records);
+    s.files++;
+  }
+  return [...map.values()];
+}
+
+function seriesSlot(run) {
+  const key = run.name.trim() || run.fileName;
+  const first = includedRuns().find(r => (r.name.trim() || r.fileName) === key);
+  return first ? first.slot : run.slot;
+}
+
+function renderRunsTable() {
+  const t = $("runsTable");
+  if (!state.runs.length) { t.innerHTML = `<tr><td class="empty">No files loaded yet.</td></tr>`; return; }
+  t.innerHTML = `<tr><th>Show</th><th>Name</th><th>File</th><th class="num">Rows</th><th>Format</th><th>Environment</th><th></th></tr>` +
+    state.runs.map(r => {
+      const env = r.meta.filter(m => /^(unity|cpu)=/.test(m)).join(" · ");
+      return `<tr data-id="${r.id}">
+        <td><input type="checkbox" class="inc" ${r.include ? "checked" : ""}></td>
+        <td style="text-align:left"><span class="swatch" style="background:var(--s${seriesSlot(r)})"></span><input type="text" class="nm" value="${esc(r.name)}"></td>
+        <td style="text-align:left">${esc(r.fileName)}</td>
+        <td class="num">${r.records.length}</td>
+        <td>${r.oldFormat ? "old" : "new"}</td>
+        <td style="text-align:left;white-space:normal;max-width:320px" class="note">${esc(env)}</td>
+        <td><button type="button" class="rm">Remove</button></td>
+      </tr>`;
+    }).join("");
+}
+
+function fillSelect(sel, options, keep) {
+  const prev = sel.value;
+  sel.innerHTML = options.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("");
+  if (keep && options.some(([v]) => v === prev)) sel.value = prev;
+}
+
+function renderFilters() {
+  const runOpts = seriesList().map(s => [s.id, s.files > 1 ? `${s.name} (${s.files} files)` : s.name]);
+  fillSelect($("baseSel"), runOpts, true);
+  fillSelect($("cmpSel"), runOpts, true);
+  const series = seriesList();
+  if (series.length >= 2 && $("baseSel").value === $("cmpSel").value) {
+    $("cmpSel").value = series.find(s => s.id !== $("baseSel").value).id;
+  }
+  const all = state.runs.flatMap(r => r.records);
+  const uniq = f => [...new Set(all.map(f))].sort();
+  const modes = uniq(r => r.mode);
+  fillSelect($("modeSel"), [["*", "All"], ...modes.map(m => [m, m])], true);
+  if (!$("modeSel").dataset.touched && modes.includes("Multifractal")) $("modeSel").value = "Multifractal";
+  fillSelect($("pathSel"), [["*", "All"], ...uniq(r => r.path).map(p => [p, p])], true);
+  if (!$("pathSel").dataset.touched && uniq(r => r.path).includes("full")) $("pathSel").value = "full";
+  const colors = [...new Set(all.map(r => r.colorCount).filter(Number.isFinite))].sort((a, b) => a - b);
+  fillSelect($("colorSel"), [["*", "All"], ...colors.map(c => [String(c), String(c)])], true);
+}
+
+function renderTiles(base, cmp) {
+  const el = $("tiles");
+  if (!base || !cmp || base === cmp) { el.innerHTML = `<div class="empty">Load at least two runs and pick a baseline and a compare run.</div>`; return; }
+  const sb = summarize(base), sc = summarize(cmp);
+  const shared = [...sb.keys()].filter(k => sc.has(k)).sort((a, b) => a - b);
+  if (!shared.length) { el.innerHTML = `<div class="empty">No resolution has enough samples in both runs with the current filters.</div>`; return; }
+  el.innerHTML = shared.map(res => {
+    const a = sb.get(res).total, b = sc.get(res).total;
+    const speed = a.mean / b.mean;
+    const pct = (b.mean - a.mean) / a.mean * 100;
+    const cls = pct < 0 ? "good" : "bad";
+    const word = speed >= 1 ? `${fmt(speed, 2)}× faster` : `${fmt(1 / speed, 2)}× slower`;
+    return `<div class="tile">
+      <div class="label">${res}×${res} · total per generation</div>
+      <div class="value">${word}</div>
+      <div class="detail">${fmt(a.mean)} → ${fmt(b.mean)} ms <span class="${cls}">(${pct > 0 ? "+" : ""}${fmt(pct)}%)</span></div>
+      <div class="detail">n = ${a.n} vs ${b.n}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderStageLegend() {
+  $("stageLegend").innerHTML = stagesInUse().map(s =>
+    `<span><span class="swatch" style="background:var(--s${s.slot})"></span>${s.label}</span>`).join("");
+}
+
+function renderBreakdown() {
+  const host = $("breakdown");
+  host.innerHTML = "";
+  const sums = seriesList().map(r => ({ run: r, sum: summarize(r) }));
+  const resolutions = [...new Set(sums.flatMap(s => [...s.sum.keys()]))].sort((a, b) => a - b);
+  if (!resolutions.length) { host.innerHTML = `<div class="empty">No data for the current filters.</div>`; return; }
+
+  const stages = stagesInUse();
+  const width = Math.max(320, host.clientWidth);
+  const labelW = Math.min(170, width * 0.32);
+  const right = 64, barH = 20, rowGap = 6, groupGap = 22, headH = 18, axisH = 24;
+  const rows = [];
+  let y = 0;
+  for (const res of resolutions) {
+    const members = sums.filter(s => s.sum.has(res));
+    rows.push({ type: "head", res, y, vertices: members[0].sum.get(res).vertices });
+    y += headH;
+    for (const m of members) { rows.push({ type: "bar", res, run: m.run, s: m.sum.get(res), y }); y += barH + rowGap; }
+    y += groupGap - rowGap;
+  }
+  const height = y + axisH;
+  const max = Math.max(...rows.filter(r => r.type === "bar").map(r => stages.reduce((a, st) => a + r.s.stages[st.key].mean, 0)));
+  const step = niceStep(max, 5);
+  const xMax = Math.ceil(max / step) * step;
+  const plotW = width - labelW - right;
+  const sx = v => labelW + v / xMax * plotW;
+
+  const svg = svgEl("svg", { class: "chart", width, height, viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": "Stage breakdown by resolution and run" }, host);
+  const grid = svgEl("g", { class: "tick" }, svg);
+  for (let v = 0; v <= xMax + 1e-9; v += step) {
+    svgEl("line", { x1: sx(v), x2: sx(v), y1: 0, y2: height - axisH, "stroke-width": 1 }, grid);
+    const t = svgEl("text", { x: sx(v), y: height - 8, "text-anchor": "middle" }, svg);
+    t.textContent = `${+v.toFixed(3)} ms`;
+  }
+  svgEl("line", { class: "axis", x1: labelW, x2: labelW, y1: 0, y2: height - axisH, "stroke-width": 1 }, svg);
+
+  for (const row of rows) {
+    if (row.type === "head") {
+      const t = svgEl("text", { x: 0, y: row.y + 12, class: "strong" }, svg);
+      t.textContent = `${row.res}×${row.res}  (${row.vertices.toLocaleString()} vertices)`;
+      continue;
+    }
+    const name = svgEl("text", { x: labelW - 8, y: row.y + barH / 2 + 4, "text-anchor": "end" }, svg);
+    name.textContent = row.run.name.length > 24 ? row.run.name.slice(0, 23) + "…" : row.run.name;
+    let acc = 0;
+    const total = stages.reduce((a, st) => a + row.s.stages[st.key].mean, 0);
+    const visible = stages.filter(st => row.s.stages[st.key].mean > 0);
+    visible.forEach((st, i) => {
+      const v = row.s.stages[st.key];
+      const x0 = sx(acc), x1 = sx(acc + v.mean);
+      acc += v.mean;
+      const last = i === visible.length - 1;
+      const w = Math.max(0.5, x1 - x0 - (last ? 0 : 2));
+      const fill = `var(--s${st.slot})`;
+      const shape = last
+        ? svgEl("path", { d: roundedEnd(x0, row.y, w, barH, 4), fill }, svg)
+        : svgEl("rect", { x: x0, y: row.y, width: w, height: barH, fill }, svg);
+      shape.style.cursor = "default";
+      const html = `<div class="t">${esc(row.run.name)} · ${row.res}×${row.res}</div>
+        <div><span class="swatch" style="background:${fill}"></span>${st.label}: <b>${fmt(v.mean, 2)} ms</b> ± ${fmt(v.sd, 2)}</div>
+        <div class="note">${fmt(v.mean / total * 100)}% of ${fmt(total)} ms · n = ${v.n}</div>`;
+      shape.addEventListener("mousemove", e => showTip(e, html));
+      shape.addEventListener("mouseleave", hideTip);
+    });
+    const tt = svgEl("text", { x: sx(total) + 6, y: row.y + barH / 2 + 4, class: "strong" }, svg);
+    tt.textContent = `${fmt(total)} ms`;
+  }
+}
+
+function renderScaling() {
+  const host = $("scaling");
+  host.innerHTML = "";
+  const allSeries = seriesList();
+  const runs = allSeries.slice(0, MAX_SCATTER_RUNS);
+  const extra = allSeries.length - runs.length;
+  const scatterSlot = new Map(runs.map((r, i) => [r.id, i + 1]));
+  $("runLegend").innerHTML = runs.map(r =>
+    `<span><span class="swatch" style="background:var(--s${scatterSlot.get(r.id)})"></span>${esc(r.name)}</span>`).join("") +
+    (extra > 0 ? `<span class="note">${extra} more series hidden. Untick runs above to choose which three to draw.</span>` : "");
+
+  const data = runs.map(r => ({ run: r, recs: filteredRecords(r), sum: summarize(r) }));
+  const pts = data.flatMap(d => d.recs);
+  if (!pts.length) { host.innerHTML = `<div class="empty">No data for the current filters.</div>`; return; }
+
+  const width = Math.max(320, host.clientWidth);
+  const height = 320;
+  const m = { l: 56, r: 120, t: 12, b: 36 };
+  const xMaxRaw = Math.max(...pts.map(p => p.vertices));
+  const yMaxRaw = Math.max(...pts.map(p => p.total));
+  const xs = niceStep(xMaxRaw, 5), ys = niceStep(yMaxRaw, 5);
+  const xMax = Math.ceil(xMaxRaw / xs) * xs, yMax = Math.ceil(yMaxRaw / ys) * ys;
+  const sx = v => m.l + v / xMax * (width - m.l - m.r);
+  const sy = v => height - m.b - v / yMax * (height - m.t - m.b);
+
+  const svg = svgEl("svg", { class: "chart", width, height, viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": "Total time against vertex count" }, host);
+  const grid = svgEl("g", { class: "tick" }, svg);
+  for (let v = 0; v <= yMax + 1e-9; v += ys) {
+    svgEl("line", { x1: m.l, x2: width - m.r, y1: sy(v), y2: sy(v), "stroke-width": 1 }, grid);
+    const t = svgEl("text", { x: m.l - 6, y: sy(v) + 4, "text-anchor": "end" }, svg);
+    t.textContent = `${+v.toFixed(3)}`;
+  }
+  for (let v = 0; v <= xMax + 1e-9; v += xs) {
+    const t = svgEl("text", { x: sx(v), y: height - m.b + 16, "text-anchor": "middle" }, svg);
+    t.textContent = v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : `${v}`;
+  }
+  svgEl("line", { class: "axis", x1: m.l, x2: width - m.r, y1: sy(0), y2: sy(0), "stroke-width": 1 }, svg);
+  const yl = svgEl("text", { x: m.l, y: m.t - 2 + 8, "text-anchor": "start" }, svg);
+  yl.textContent = "";
+  const xl = svgEl("text", { x: (m.l + width - m.r) / 2, y: height - 4, "text-anchor": "middle" }, svg);
+  xl.textContent = "vertices";
+  const ylab = svgEl("text", { x: 12, y: (m.t + height - m.b) / 2, "text-anchor": "middle", transform: `rotate(-90 12 ${(m.t + height - m.b) / 2})` }, svg);
+  ylab.textContent = "total ms";
+
+  const endLabels = [];
+  for (const d of data) {
+    const color = `var(--s${scatterSlot.get(d.run.id)})`;
+    for (const p of d.recs) {
+      const c = svgEl("circle", { cx: sx(p.vertices), cy: sy(p.total), r: 3, fill: color, "fill-opacity": 0.3 }, svg);
+      const html = `<div class="t">${esc(d.run.name)}</div><div>${p.resolution}×${p.resolution} · ${p.mode} · ${p.path}</div><div><b>${fmt(p.total, 2)} ms</b> total</div>`;
+      c.addEventListener("mousemove", e => showTip(e, html));
+      c.addEventListener("mouseleave", hideTip);
+    }
+    const means = [...d.sum.values()].sort((a, b) => a.vertices - b.vertices);
+    if (!means.length) continue;
+    svgEl("path", { d: means.map((s, i) => `${i ? "L" : "M"}${sx(s.vertices)},${sy(s.total.mean)}`).join(""), fill: "none", stroke: color, "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+    for (const s of means) {
+      svgEl("circle", { cx: sx(s.vertices), cy: sy(s.total.mean), r: 6, fill: "var(--surface-1)" }, svg);
+      const c = svgEl("circle", { cx: sx(s.vertices), cy: sy(s.total.mean), r: 4.5, fill: color }, svg);
+      const hit = svgEl("circle", { cx: sx(s.vertices), cy: sy(s.total.mean), r: 12, fill: "transparent" }, svg);
+      const html = `<div class="t">${esc(d.run.name)} · ${s.resolution}×${s.resolution}</div><div>Mean <b>${fmt(s.total.mean, 2)} ms</b> ± ${fmt(s.total.sd, 2)}</div><div class="note">n = ${s.n} · ${s.vertices.toLocaleString()} vertices</div>`;
+      hit.addEventListener("mousemove", e => showTip(e, html));
+      hit.addEventListener("mouseleave", hideTip);
+    }
+    const last = means[means.length - 1];
+    endLabels.push({ x: sx(last.vertices) + 10, y: sy(last.total.mean) + 4, text: d.run.name.length > 14 ? d.run.name.slice(0, 13) + "…" : d.run.name });
+  }
+
+  endLabels.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < endLabels.length; i++) {
+    if (endLabels[i].y - endLabels[i - 1].y < 14) endLabels[i].y = endLabels[i - 1].y + 14;
+  }
+  for (const l of endLabels) {
+    const lab = svgEl("text", { x: l.x, y: l.y, class: "strong" }, svg);
+    lab.textContent = l.text;
+  }
+}
+
+let nameTimer;
+function refreshKeepFocus() {
+  const active = document.activeElement;
+  const row = active && active.closest ? active.closest("tr[data-id]") : null;
+  const id = row ? row.dataset.id : null;
+  const pos = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
+  refresh();
+  if (!id) return;
+  const input = document.querySelector(`tr[data-id="${id}"] input.nm`);
+  if (!input) return;
+  input.focus();
+  if (pos !== null) input.setSelectionRange(pos, pos);
+}
+
+let lastTable = null;
+function renderTable(base, cmp) {
+  const host = $("cmpTable");
+  lastTable = null;
+  if (!base || !cmp || base === cmp) { host.innerHTML = `<div class="empty">Pick a baseline and a different compare run.</div>`; return; }
+  const sb = summarize(base), sc = summarize(cmp);
+  const shared = [...sb.keys()].filter(k => sc.has(k)).sort((a, b) => a - b);
+  if (!shared.length) { host.innerHTML = `<div class="empty">No resolution has enough samples in both runs.</div>`; return; }
+  const stages = stagesInUse();
+  const header = ["Resolution", "Stage", `${base.name} (ms)`, `${cmp.name} (ms)`, "Δ ms", "Δ %"];
+  const rows = [];
+  for (const res of shared) {
+    const a = sb.get(res), b = sc.get(res);
+    for (const st of stages) {
+      const x = a.stages[st.key], y = b.stages[st.key];
+      if (x.mean === 0 && y.mean === 0) continue;
+      rows.push({ res, stage: st.label, a: x, b: y, total: false });
+    }
+    rows.push({ res, stage: "Total", a: a.total, b: b.total, total: true });
+  }
+  const cell = s => `${fmt(s.mean, 2)} ± ${fmt(s.sd, 2)} (${s.n})`;
+  const delta = r => r.b.mean - r.a.mean;
+  const pct = r => r.a.mean === 0 ? NaN : delta(r) / r.a.mean * 100;
+  host.innerHTML = `<table><tr>${header.map(h => `<th>${esc(h)}</th>`).join("")}</tr>` +
+    rows.map(r => {
+      const d = delta(r), p = pct(r);
+      const cls = Math.abs(d) < 0.05 ? "" : d < 0 ? "good" : "bad";
+      return `<tr class="${r.total ? "total" : ""}"><td>${r.res}×${r.res}</td><td style="text-align:left">${esc(r.stage)}</td>
+        <td>${cell(r.a)}</td><td>${cell(r.b)}</td>
+        <td class="${cls}">${d > 0 ? "+" : ""}${fmt(d, 2)}</td>
+        <td class="${cls}">${Number.isFinite(p) ? (p > 0 ? "+" : "") + fmt(p) + "%" : "–"}</td></tr>`;
+    }).join("") + `</table>`;
+  lastTable = { header, rows: rows.map(r => {
+    const p = pct(r);
+    return [`${r.res}`, r.stage, `${fmt(r.a.mean, 2)} ± ${fmt(r.a.sd, 2)} (n=${r.a.n})`, `${fmt(r.b.mean, 2)} ± ${fmt(r.b.sd, 2)} (n=${r.b.n})`,
+      fmt(delta(r), 2), Number.isFinite(p) ? fmt(p) + "%" : ""];
+  }) };
+}
+
+function copyText(text) {
+  const done = () => { $("copyMsg").textContent = "Copied."; setTimeout(() => $("copyMsg").textContent = "", 1500); };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => fallback());
+  else fallback();
+  function fallback() {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch { $("copyMsg").textContent = "Copy failed."; }
+    ta.remove();
+  }
+}
+
+function refresh() {
+  renderRunsTable();
+  renderFilters();
+  const base = seriesList().find(s => s.id === $("baseSel").value);
+  const cmp = seriesList().find(s => s.id === $("cmpSel").value);
+  renderStageLegend();
+  renderTiles(base, cmp);
+  renderBreakdown();
+  renderScaling();
+  renderTable(base, cmp);
+}
+
+$("drop").addEventListener("click", () => $("fileInput").click());
+$("drop").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") $("fileInput").click(); });
+$("fileInput").addEventListener("change", e => { readFiles(e.target.files); e.target.value = ""; });
+["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if (ev === "drop" || e.target === $("drop")) $("drop").classList.remove("over"); }));
+document.addEventListener("drop", e => { if (e.dataTransfer && e.dataTransfer.files.length) readFiles(e.dataTransfer.files); });
+
+$("runsTable").addEventListener("input", e => {
+  const tr = e.target.closest("tr[data-id]");
+  if (!tr) return;
+  const run = state.runs.find(r => r.id === tr.dataset.id);
+  if (e.target.classList.contains("nm")) {
+    run.name = e.target.value || run.fileName;
+    clearTimeout(nameTimer);
+    nameTimer = setTimeout(refreshKeepFocus, 250);
+  }
+});
+$("runsTable").addEventListener("change", e => {
+  const tr = e.target.closest("tr[data-id]");
+  if (!tr) return;
+  const run = state.runs.find(r => r.id === tr.dataset.id);
+  if (e.target.classList.contains("inc")) { run.include = e.target.checked; refresh(); }
+});
+$("runsTable").addEventListener("click", e => {
+  if (!e.target.classList.contains("rm")) return;
+  const id = e.target.closest("tr[data-id]").dataset.id;
+  state.runs = state.runs.filter(r => r.id !== id);
+  refresh();
+});
+["baseSel", "cmpSel", "modeSel", "pathSel", "colorSel"].forEach(id =>
+  $(id).addEventListener("change", e => { e.target.dataset.touched = "1"; refresh(); }));
+$("minN").addEventListener("input", refresh);
+$("mergeChk").addEventListener("change", refresh);
+
+$("copyMd").addEventListener("click", () => {
+  if (!lastTable) return;
+  const { header, rows } = lastTable;
+  const md = [`| ${header.join(" | ")} |`, `|${header.map((_, i) => i < 2 ? " --- " : " ---: ").join("|")}|`,
+    ...rows.map(r => `| ${r.join(" | ")} |`)].join("\n");
+  copyText(md);
+});
+$("copyCsv").addEventListener("click", () => {
+  if (!lastTable) return;
+  const q = v => /[",]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  copyText([lastTable.header, ...lastTable.rows].map(r => r.map(q).join(",")).join("\n"));
+});
+
+$("themeBtn").addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+});
+
+let resizeTimer;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { renderBreakdown(); renderScaling(); }, 120); });
+
+refresh();
+</script>
+</body>
+</html>

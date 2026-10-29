@@ -16,13 +16,19 @@ namespace TerrainDemo
 
         public double HeightMs { get; private set; }
         public double MeshMs { get; private set; }
+        public double ColorMs { get; private set; }
         public double UploadMs { get; private set; }
         public double NormalsMs { get; private set; }
         public double BoundsMs { get; private set; }
-        public double ColliderMs { get; private set; }
-        public double TotalMs => HeightMs + MeshMs + UploadMs + NormalsMs + BoundsMs + ColliderMs;
+        public double TotalMs => HeightMs + MeshMs + ColorMs + UploadMs + NormalsMs + BoundsMs;
+
+        public bool LastWasRecolor { get; private set; }
 
         public event Action Generated;
+
+        private float[,] _cachedHeights;
+        private float[] _cachedSlopes;
+        private TerrainParams _shapeSnapshot;
 
         public TerrainParams Parameters
         {
@@ -31,9 +37,26 @@ namespace TerrainDemo
         }
 
         [ContextMenu("Generate")]
-        public void Generate()
+        public void ForceGenerate() => Generate(true);
+
+        public void Generate() => Generate(false);
+
+        public void Generate(bool forceFull)
         {
             var meshFilter = GetComponent<MeshFilter>();
+            Mesh existing = meshFilter.sharedMesh;
+
+            if (!forceFull
+                && _cachedHeights != null
+                && existing != null
+                && existing.vertexCount == _cachedSlopes.Length
+                && parameters.SameShape(_shapeSnapshot))
+            {
+                Recolor(existing);
+                return;
+            }
+
+            LastWasRecolor = false;
             var clock = Stopwatch.StartNew();
 
             float[,] heights = HeightmapGenerator.Generate(parameters);
@@ -41,9 +64,18 @@ namespace TerrainDemo
             HeightMs = clock.Elapsed.TotalMilliseconds;
 
             clock.Restart();
-            MeshData meshData = MeshDataBuilder.Build(heights, parameters);
+            MeshData meshData = MeshDataBuilder.BuildGeometry(heights, parameters);
             clock.Stop();
             MeshMs = clock.Elapsed.TotalMilliseconds;
+
+            clock.Restart();
+            meshData.colors = MeshDataBuilder.BuildColors(heights, meshData.Slopes, parameters);
+            clock.Stop();
+            ColorMs = clock.Elapsed.TotalMilliseconds;
+
+            _cachedHeights = heights;
+            _cachedSlopes = meshData.Slopes;
+            _shapeSnapshot = parameters.CloneShape();
 
             if (meshFilter.sharedMesh == null)
             {
@@ -76,16 +108,34 @@ namespace TerrainDemo
             clock.Stop();
             BoundsMs = clock.Elapsed.TotalMilliseconds;
 
-            // Apply Collider
-            clock.Restart();
-            var collider = GetComponent<MeshCollider>();
-            if (collider != null) collider.sharedMesh = mesh;
+            LastStageStats = string.Format(CultureInfo.InvariantCulture,
+                "Height {0:F1}ms ({1}x{1}) | Mesh {2:F1}ms | Color {3:F1}ms | Upload {4:F1}ms | Normals {5:F1}ms | Bounds {6:F1}ms",
+                HeightMs, parameters.Resolution, MeshMs, ColorMs, UploadMs, NormalsMs, BoundsMs);
+
+            Generated?.Invoke();
+        }
+
+        private void Recolor(Mesh mesh)
+        {
+            LastWasRecolor = true;
+            HeightMs = 0;
+            MeshMs = 0;
+            NormalsMs = 0;
+            BoundsMs = 0;
+
+            var clock = Stopwatch.StartNew();
+            Color[] colors = MeshDataBuilder.BuildColors(_cachedHeights, _cachedSlopes, parameters);
             clock.Stop();
-            ColliderMs = clock.Elapsed.TotalMilliseconds;
+            ColorMs = clock.Elapsed.TotalMilliseconds;
+
+            clock.Restart();
+            mesh.colors = colors;
+            clock.Stop();
+            UploadMs = clock.Elapsed.TotalMilliseconds;
 
             LastStageStats = string.Format(CultureInfo.InvariantCulture,
-                "Height {0:F1}ms ({1}x{1}) | Mesh {2:F1}ms | Upload {3:F1}ms | Normals {4:F1}ms | Bounds {5:F1}ms | Collider {6:F1}ms",
-                HeightMs, parameters.Resolution, MeshMs, UploadMs, NormalsMs, BoundsMs, ColliderMs);
+                "Recolor ({0}x{0}) | Color {1:F1}ms | Upload {2:F1}ms",
+                parameters.Resolution, ColorMs, UploadMs);
 
             Generated?.Invoke();
         }

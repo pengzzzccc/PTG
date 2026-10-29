@@ -54,6 +54,44 @@ namespace TerrainDemo.Core
             };
         }
 
+        public TerrainParams CloneShape()
+        {
+            return new TerrainParams
+            {
+                Seed = Seed,
+                Resolution = Resolution,
+                WorldSize = WorldSize,
+                HeightScale = HeightScale,
+                Scale = Scale,
+                Octaves = Octaves,
+                Lacunarity = Lacunarity,
+                Persistence = Persistence,
+                HeightExponent = HeightExponent,
+                TerraceLevels = TerraceLevels,
+                Mode = Mode,
+                Offset = Offset,
+                Gain = Gain,
+            };
+        }
+
+        public bool SameShape(TerrainParams other)
+        {
+            return other != null
+                && Seed == other.Seed
+                && Resolution == other.Resolution
+                && WorldSize == other.WorldSize
+                && HeightScale == other.HeightScale
+                && Scale == other.Scale
+                && Octaves == other.Octaves
+                && Lacunarity == other.Lacunarity
+                && Persistence == other.Persistence
+                && HeightExponent == other.HeightExponent
+                && TerraceLevels == other.TerraceLevels
+                && Mode == other.Mode
+                && Offset == other.Offset
+                && Gain == other.Gain;
+        }
+
         public void EnsureColorLayers()
         {
             List<ColorLayer> defaults = DefaultColorLayers();

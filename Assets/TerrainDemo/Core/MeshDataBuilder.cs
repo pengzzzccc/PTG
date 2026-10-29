@@ -11,28 +11,43 @@ namespace TerrainDemo.Core
 
         public Vector2[] UVs;
 
+        public float[] Slopes;
+
         public Color[] colors;
     }
 
 
     public static class MeshDataBuilder
     {
+        private const float EdgeWidth = 0.05f;
+
+        private struct LayerRange
+        {
+            public Color Color;
+            public float HeightMin, HeightMax, SlopeMin, SlopeMax;
+            public float HeightLow, HeightHigh, SlopeLow, SlopeHigh;
+            public float HeightInnerLow, HeightInnerHigh, SlopeInnerLow, SlopeInnerHigh;
+        }
+
         public static MeshData Build(float[,] heights, TerrainParams parameters)
+        {
+            MeshData mesh = BuildGeometry(heights, parameters);
+            mesh.colors = BuildColors(heights, mesh.Slopes, parameters);
+            return mesh;
+        }
+
+        public static MeshData BuildGeometry(float[,] heights, TerrainParams parameters)
         {
             int resolution = parameters.Resolution;
             float cell = parameters.WorldSize / (resolution - 1);
             int vertexCount = resolution * resolution;
-
-            List<ColorLayer> layers = parameters.ColorLayers;
-            if (layers == null || layers.Count == 0) layers = TerrainParams.DefaultColorLayers();
-            int layerCount = Mathf.Clamp(parameters.ColorCount, 1, layers.Count);
 
             var mesh = new MeshData
             {
                 Vertices = new Vector3[vertexCount],
                 UVs = new Vector2[vertexCount],
                 Triangles = new int[(resolution - 1) * (resolution - 1) * 6],
-                colors = new Color[vertexCount],
+                Slopes = new float[vertexCount],
             };
 
             for (int z = 0; z < resolution; z++)
@@ -47,7 +62,7 @@ namespace TerrainDemo.Core
                     mesh.UVs[index] = new Vector2(
                         x / (float)(resolution - 1),
                         z / (float)(resolution - 1));
-                    mesh.colors[index] = GetColor(heights, x, z, resolution, cell, parameters.HeightScale, layers, layerCount);
+                    mesh.Slopes[index] = GetSlope(heights, x, z, resolution, cell, parameters.HeightScale);
                 }
             }
 
@@ -68,14 +83,62 @@ namespace TerrainDemo.Core
             return mesh;
         }
 
+        public static Color[] BuildColors(float[,] heights, float[] slopes, TerrainParams parameters)
+        {
+            int resolution = parameters.Resolution;
+            var colors = new Color[resolution * resolution];
 
-        private const float EdgeWidth = 0.05f;
+            List<ColorLayer> layers = parameters.ColorLayers;
+            if (layers == null || layers.Count == 0) layers = TerrainParams.DefaultColorLayers();
+            int layerCount = Mathf.Clamp(parameters.ColorCount, 1, layers.Count);
+            LayerRange[] ranges = BuildRanges(layers, layerCount);
 
-        private static Color GetColor(float[,] heights, int x, int z, int resolution, float cell, float heightScale,
-            List<ColorLayer> layers, int layerCount)
+            for (int z = 0; z < resolution; z++)
+            {
+                for (int x = 0; x < resolution; x++)
+                {
+                    int index = z * resolution + x;
+                    colors[index] = GetColor(heights[z, x], slopes[index], ranges);
+                }
+            }
+            return colors;
+        }
+
+        private static LayerRange[] BuildRanges(List<ColorLayer> layers, int layerCount)
+        {
+            float half = EdgeWidth * 0.5f;
+            var ranges = new LayerRange[layerCount];
+            for (int i = 0; i < layerCount; i++)
+            {
+                ColorLayer layer = layers[i];
+                bool openHeightMin = layer.HeightMin <= 0f;
+                bool openHeightMax = layer.HeightMax >= 1f;
+                bool openSlopeMin = layer.SlopeMin <= 0f;
+                bool openSlopeMax = layer.SlopeMax >= 1f;
+
+                ranges[i] = new LayerRange
+                {
+                    Color = layer.Color,
+                    HeightMin = layer.HeightMin,
+                    HeightMax = layer.HeightMax,
+                    SlopeMin = layer.SlopeMin,
+                    SlopeMax = layer.SlopeMax,
+                    HeightLow = openHeightMin ? float.NegativeInfinity : layer.HeightMin - half,
+                    HeightHigh = openHeightMax ? float.PositiveInfinity : layer.HeightMax + half,
+                    SlopeLow = openSlopeMin ? float.NegativeInfinity : layer.SlopeMin - half,
+                    SlopeHigh = openSlopeMax ? float.PositiveInfinity : layer.SlopeMax + half,
+                    HeightInnerLow = openHeightMin ? float.NegativeInfinity : layer.HeightMin + half,
+                    HeightInnerHigh = openHeightMax ? float.PositiveInfinity : layer.HeightMax - half,
+                    SlopeInnerLow = openSlopeMin ? float.NegativeInfinity : layer.SlopeMin + half,
+                    SlopeInnerHigh = openSlopeMax ? float.PositiveInfinity : layer.SlopeMax - half,
+                };
+            }
+            return ranges;
+        }
+
+        private static float GetSlope(float[,] heights, int x, int z, int resolution, float cell, float heightScale)
         {
             //get height at four point
-            float h = heights[z, x];
             float hb = heights[Mathf.Max(z - 1, 0), x];
             float ht = heights[Mathf.Min(z + 1, resolution - 1), x];
             float hr = heights[z, Mathf.Min(x + 1, resolution - 1)];
@@ -86,15 +149,32 @@ namespace TerrainDemo.Core
             float dz = (ht - hb) * heightScale / (2f * cell);
 
             Vector3 normal = new Vector3(-dx, 1f, -dz).normalized;
-            float slop = 1f - normal.y;
+            return 1f - normal.y;
+        }
 
-            Color c = layers[0].Color;
-            for (int i = 0; i < layerCount; i++)
+        private static Color GetColor(float h, float slope, LayerRange[] ranges)
+        {
+            Color c = ranges[0].Color;
+            int start = 0;
+
+            for (int i = ranges.Length - 1; i >= 0; i--)
             {
-                ColorLayer layer = layers[i];
-                float weight = RangeWeight(h, layer.HeightMin, layer.HeightMax)
-                    * RangeWeight(slop, layer.SlopeMin, layer.SlopeMax);
-                c = Color.Lerp(c, layer.Color, weight);
+                LayerRange r = ranges[i];
+                if (h > r.HeightInnerLow && h < r.HeightInnerHigh && slope > r.SlopeInnerLow && slope < r.SlopeInnerHigh)
+                {
+                    c = r.Color;
+                    start = i + 1;
+                    break;
+                }
+            }
+
+            for (int i = start; i < ranges.Length; i++)
+            {
+                LayerRange r = ranges[i];
+                if (h <= r.HeightLow || h >= r.HeightHigh || slope <= r.SlopeLow || slope >= r.SlopeHigh) continue;
+
+                float weight = RangeWeight(h, r.HeightMin, r.HeightMax) * RangeWeight(slope, r.SlopeMin, r.SlopeMax);
+                c = Color.Lerp(c, r.Color, weight);
             }
             return c;
         }
