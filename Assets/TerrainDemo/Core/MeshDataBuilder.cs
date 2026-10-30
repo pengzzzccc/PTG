@@ -29,14 +29,14 @@ namespace TerrainDemo.Core
             public float HeightInnerLow, HeightInnerHigh, SlopeInnerLow, SlopeInnerHigh;
         }
 
-        public static MeshData Build(float[,] heights, TerrainParams parameters)
+        public static MeshData Build(float[,] heights, TerrainParams parameters, bool parallel = true)
         {
-            MeshData mesh = BuildGeometry(heights, parameters);
-            mesh.colors = BuildColors(heights, mesh.Slopes, parameters);
+            MeshData mesh = BuildGeometry(heights, parameters, parallel);
+            mesh.colors = BuildColors(heights, mesh.Slopes, parameters, parallel);
             return mesh;
         }
 
-        public static MeshData BuildGeometry(float[,] heights, TerrainParams parameters)
+        public static MeshData BuildGeometry(float[,] heights, TerrainParams parameters, bool parallel = true)
         {
             int resolution = parameters.Resolution;
             float cell = parameters.WorldSize / (resolution - 1);
@@ -50,40 +50,46 @@ namespace TerrainDemo.Core
                 Slopes = new float[vertexCount],
             };
 
-            for (int z = 0; z < resolution; z++)
+            Vector3[] vertices = mesh.Vertices;
+            Vector2[] uvs = mesh.UVs;
+            float[] slopes = mesh.Slopes;
+            int[] triangles = mesh.Triangles;
+            float heightScale = parameters.HeightScale;
+
+            HeightmapGenerator.ForRows(resolution, parallel, z =>
             {
                 for (int x = 0; x < resolution; x++)
                 {
                     int index = z * resolution + x;
-                    mesh.Vertices[index] = new Vector3(
+                    vertices[index] = new Vector3(
                         x * cell,
-                        heights[z, x] * parameters.HeightScale,
+                        heights[z, x] * heightScale,
                         z * cell);
-                    mesh.UVs[index] = new Vector2(
+                    uvs[index] = new Vector2(
                         x / (float)(resolution - 1),
                         z / (float)(resolution - 1));
-                    mesh.Slopes[index] = GetSlope(heights, x, z, resolution, cell, parameters.HeightScale);
+                    slopes[index] = GetSlope(heights, x, z, resolution, cell, heightScale);
                 }
-            }
+            });
 
-            int t = 0;
-            for (int z = 0; z < resolution - 1; z++)
+            HeightmapGenerator.ForRows(resolution - 1, parallel, z =>
             {
+                int t = z * (resolution - 1) * 6;
                 for (int x = 0; x < resolution - 1; x++)
                 {
                     int i = z * resolution + x;
-                    mesh.Triangles[t++] = i;
-                    mesh.Triangles[t++] = i + resolution;
-                    mesh.Triangles[t++] = i + 1;
-                    mesh.Triangles[t++] = i + 1;
-                    mesh.Triangles[t++] = i + resolution;
-                    mesh.Triangles[t++] = i + resolution + 1;
+                    triangles[t++] = i;
+                    triangles[t++] = i + resolution;
+                    triangles[t++] = i + 1;
+                    triangles[t++] = i + 1;
+                    triangles[t++] = i + resolution;
+                    triangles[t++] = i + resolution + 1;
                 }
-            }
+            });
             return mesh;
         }
 
-        public static Color[] BuildColors(float[,] heights, float[] slopes, TerrainParams parameters)
+        public static Color[] BuildColors(float[,] heights, float[] slopes, TerrainParams parameters, bool parallel = true)
         {
             int resolution = parameters.Resolution;
             var colors = new Color[resolution * resolution];
@@ -93,14 +99,14 @@ namespace TerrainDemo.Core
             int layerCount = Mathf.Clamp(parameters.ColorCount, 1, layers.Count);
             LayerRange[] ranges = BuildRanges(layers, layerCount);
 
-            for (int z = 0; z < resolution; z++)
+            HeightmapGenerator.ForRows(resolution, parallel, z =>
             {
                 for (int x = 0; x < resolution; x++)
                 {
                     int index = z * resolution + x;
                     colors[index] = GetColor(heights[z, x], slopes[index], ranges);
                 }
-            }
+            });
             return colors;
         }
 

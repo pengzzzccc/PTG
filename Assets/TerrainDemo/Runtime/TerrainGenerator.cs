@@ -12,6 +12,14 @@ namespace TerrainDemo
     {
         [SerializeField] private TerrainParams parameters = new TerrainParams();
 
+        [SerializeField] private bool useParallel = true;
+
+        public bool UseParallel
+        {
+            get => useParallel;
+            set => useParallel = value;
+        }
+
         public string LastStageStats = "";
 
         public double HeightMs { get; private set; }
@@ -59,17 +67,17 @@ namespace TerrainDemo
             LastWasRecolor = false;
             var clock = Stopwatch.StartNew();
 
-            float[,] heights = HeightmapGenerator.Generate(parameters);
+            float[,] heights = HeightmapGenerator.Generate(parameters, useParallel);
             clock.Stop();
             HeightMs = clock.Elapsed.TotalMilliseconds;
 
             clock.Restart();
-            MeshData meshData = MeshDataBuilder.BuildGeometry(heights, parameters);
+            MeshData meshData = MeshDataBuilder.BuildGeometry(heights, parameters, useParallel);
             clock.Stop();
             MeshMs = clock.Elapsed.TotalMilliseconds;
 
             clock.Restart();
-            meshData.colors = MeshDataBuilder.BuildColors(heights, meshData.Slopes, parameters);
+            meshData.colors = MeshDataBuilder.BuildColors(heights, meshData.Slopes, parameters, useParallel);
             clock.Stop();
             ColorMs = clock.Elapsed.TotalMilliseconds;
 
@@ -124,7 +132,7 @@ namespace TerrainDemo
             BoundsMs = 0;
 
             var clock = Stopwatch.StartNew();
-            Color[] colors = MeshDataBuilder.BuildColors(_cachedHeights, _cachedSlopes, parameters);
+            Color[] colors = MeshDataBuilder.BuildColors(_cachedHeights, _cachedSlopes, parameters, useParallel);
             clock.Stop();
             ColorMs = clock.Elapsed.TotalMilliseconds;
 

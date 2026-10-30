@@ -61,7 +61,7 @@ namespace TerrainDemo
             _writer.WriteLine($"# cpu={SystemInfo.processorType} cores={SystemInfo.processorCount} sysMemMB={SystemInfo.systemMemorySize}");
             _writer.WriteLine($"# gpu={SystemInfo.graphicsDeviceName} os={SystemInfo.operatingSystem}"
                 + $" quality={QualitySettings.names[QualitySettings.GetQualityLevel()]}");
-            _writer.WriteLine("time_s,frame,seed,resolution,vertices,mode,octaves,color_count,path,"
+            _writer.WriteLine("time_s,frame,seed,resolution,vertices,mode,octaves,color_count,path,parallel,"
                 + "height_ms,mesh_ms,color_ms,upload_ms,normals_ms,bounds_ms,total_ms");
         }
 
@@ -80,6 +80,7 @@ namespace TerrainDemo
                 p.Octaves.ToString(CultureInfo.InvariantCulture),
                 p.ColorCount.ToString(CultureInfo.InvariantCulture),
                 _generator.LastWasRecolor ? "color" : "full",
+                _generator.UseParallel ? "1" : "0",
                 F(_generator.HeightMs),
                 F(_generator.MeshMs),
                 F(_generator.ColorMs),
