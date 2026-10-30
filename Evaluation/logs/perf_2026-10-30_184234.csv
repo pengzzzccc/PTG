@@ -1,0 +1,12 @@
+# PTG performance log
+# unity=6000.0.27f1 platform=WindowsEditor editor=True
+# cpu=13th Gen Intel(R) Core(TM) i9-13900HX cores=32 sysMemMB=65275
+# gpu=NVIDIA GeForce RTX 4060 Laptop GPU os=Windows 11  (10.0.26200) 64bit quality=PC
+time_s,frame,seed,resolution,vertices,mode,octaves,color_count,path,parallel,height_ms,mesh_ms,color_ms,upload_ms,normals_ms,bounds_ms,total_ms
+27.348,4463,1,257,66049,BasicFbm,5,8,full,1,8.069,2.172,2.201,2.426,1.144,0.647,16.660
+27.501,4518,1,257,66049,BasicFbm,5,8,full,1,3.134,1.245,1.122,1.310,0.877,0.451,8.138
+33.621,7004,1,257,66049,Multifractal,7,8,full,1,5.938,1.271,1.626,1.931,1.012,0.502,12.279
+46.234,12012,1,257,66049,Multifractal,7,8,color,1,0.000,0.000,1.810,0.207,0.000,0.000,2.017
+46.537,12138,1,257,66049,Multifractal,7,8,color,1,0.000,0.000,1.764,0.215,0.000,0.000,1.980
+47.581,12570,1,257,66049,Multifractal,7,8,color,1,0.000,0.000,1.698,0.206,0.000,0.000,1.905
+47.882,12696,1,257,66049,Multifractal,7,8,color,1,0.000,0.000,1.700,0.210,0.000,0.000,1.910

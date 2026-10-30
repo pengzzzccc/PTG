@@ -116,6 +116,9 @@ namespace TerrainDemo
             clock.Stop();
             BoundsMs = clock.Elapsed.TotalMilliseconds;
 
+            var wireframe = GetComponent<TerrainWireframe>();
+            if (wireframe != null) wireframe.OnGeometryChanged(meshData.Vertices, parameters.Resolution);
+
             LastStageStats = string.Format(CultureInfo.InvariantCulture,
                 "Height {0:F1}ms ({1}x{1}) | Mesh {2:F1}ms | Color {3:F1}ms | Upload {4:F1}ms | Normals {5:F1}ms | Bounds {6:F1}ms",
                 HeightMs, parameters.Resolution, MeshMs, ColorMs, UploadMs, NormalsMs, BoundsMs);

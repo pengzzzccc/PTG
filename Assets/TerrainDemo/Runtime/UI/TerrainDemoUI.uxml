@@ -26,6 +26,7 @@
             </ui:ScrollView>
 
             <ui:VisualElement name="footer-row" class="footer-row">
+                <ui:Button text="View: Shaded" name="view-mode-button" class="view-button" />
                 <ui:Button text="Generate" name="generate-button" class="generate-button" />
             </ui:VisualElement>
         </ui:VisualElement>
@@ -42,4 +43,5 @@
     </ui:VisualElement>
 
     <ui:Label text="No terrain generated yet" name="stats-label" class="stats" picking-mode="Ignore" />
+    <ui:Label name="tooltip-label" class="tooltip" picking-mode="Ignore" />
 </ui:UXML>

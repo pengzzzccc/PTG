@@ -53,13 +53,45 @@ namespace TerrainDemo
         private SliderInt _colorCountSlider;
         private ScrollView _colorList;
 
+        private Label _tooltip;
+        private VisualElement _tooltipTarget;
+        private IVisualElementScheduledItem _tooltipTimer;
+        private Vector2 _tooltipPosition;
+        private Button _viewButton;
+        private TerrainWireframe _wireframe;
+
+        private const long TooltipDelayMs = 400;
+
+        private static readonly Dictionary<string, string> Descriptions = new Dictionary<string, string>
+        {
+            { "seed-field", "The number that drives all randomness. The same seed with the same settings always rebuilds exactly the same terrain." },
+            { "random-button", "Pick a new random seed and regenerate the terrain." },
+            { "preset-hills", "Rolling Hills: few noise layers and gentle heights for soft, wide hills. Your colour settings are kept." },
+            { "preset-peaks", "Rugged Peaks: multifractal noise where high ground gets rougher while valleys stay smooth. Your colour settings are kept." },
+            { "preset-mesas", "Terraced Mesas: heights snapped into flat steps to form plateaus. Your colour settings are kept." },
+            { "resolution-slider", "Number of vertices along each side of the terrain. Higher values show finer detail but take longer, because the cost grows with the square." },
+            { "height-scale-slider", "Height of the highest possible point, in metres." },
+            { "scale-slider", "Size of the largest landforms, in metres. Larger values give broader, gentler hills; smaller values give tighter, busier terrain." },
+            { "octaves-slider", "Number of noise layers stacked on top of each other. More octaves add finer detail but cost more time." },
+            { "lacunarity-slider", "How much finer each noise layer is than the previous one. Higher values add small details faster." },
+            { "persistence-slider", "How strong each finer layer is compared with the previous one. Higher values make the surface rougher and noisier." },
+            { "offset-slider", "Rugged Peaks only. Lifts the noise before the altitude feedback. Higher values give fuller, bulkier mountains; lower values give broken, patchy ground." },
+            { "gain-slider", "Rugged Peaks only. Strength of the altitude feedback. Higher values make peaks rugged while low ground stays smooth." },
+            { "exponent-slider", "Reshapes the height curve. Above 1 flattens valleys and sharpens peaks; below 1 does the opposite." },
+            { "terrace-slider", "Snaps heights into this many flat steps to make terraces. 0 turns it off." },
+            { "generate-button", "Rebuild the whole terrain now with the current settings." },
+            { "view-mode-button", "Switch the view: shaded surface, shaded surface with wireframe, or wireframe only." },
+            { "color-count-slider", "How many colour layers are used. Layers lower in the list are painted on top of layers above them." },
+        };
+
+        private const string PickerDescription = "Click the swatch to open the colour picker: drag in the square for brightness and saturation, drag the strip for hue, or click a quick colour. You can also type a hex code such as #4C8033.";
+        private const string HeightRangeDescription = "Height range where this colour appears, from 0 (lowest point) to 1 (highest point). Drag either end.";
+        private const string SlopeRangeDescription = "Slope range where this colour appears, from 0 (flat) to 1 (vertical cliff). Drag either end.";
+
         private sealed class ColorCard
         {
             public VisualElement Root;
-            public VisualElement Swatch;
-            public Slider R;
-            public Slider G;
-            public Slider B;
+            public ColorPickerField Picker;
             public MinMaxSlider Height;
             public MinMaxSlider Slope;
         }
@@ -97,6 +129,8 @@ namespace TerrainDemo
             root.RegisterCallback<NavigationMoveEvent>(evt => evt.StopPropagation(), TrickleDown.TrickleDown);
             BuildColorCards();
             WireSpecialControls(root);
+            WireViewMode();
+            WireTooltips(root);
             if (generator != null) generator.Parameters.EnsureColorLayers();
             BuildBindings();
             if (generator != null) CopyParametersToControls(generator.Parameters);
@@ -152,6 +186,7 @@ namespace TerrainDemo
         private void OnDisable()
         {
             IsTyping = false;
+            if (_wireframe != null) _wireframe.ModeChanged -= UpdateViewButton;
         }
 
         private bool QueryControls(VisualElement root)
@@ -173,6 +208,8 @@ namespace TerrainDemo
             _statsLabel = root.Q<Label>("stats-label");
             _colorCountSlider = root.Q<SliderInt>("color-count-slider");
             _colorList = root.Q<ScrollView>("color-list");
+            _tooltip = root.Q<Label>("tooltip-label");
+            _viewButton = root.Q<Button>("view-mode-button");
 
             bool complete = _seedField != null
                 && _colorCountSlider != null && _colorList != null
@@ -212,9 +249,7 @@ namespace TerrainDemo
                 int index = i;
                 ColorCard card = _colorCards[i];
 
-                Bind(card.R, (p, v) => p.ColorLayers[index].Color.r = v, p => p.ColorLayers[index].Color.r);
-                Bind(card.G, (p, v) => p.ColorLayers[index].Color.g = v, p => p.ColorLayers[index].Color.g);
-                Bind(card.B, (p, v) => p.ColorLayers[index].Color.b = v, p => p.ColorLayers[index].Color.b);
+                Bind(card.Picker, (p, v) => p.ColorLayers[index].Color = v, p => p.ColorLayers[index].Color);
                 Bind(card.Height,
                     (p, v) =>
                     {
@@ -229,10 +264,6 @@ namespace TerrainDemo
                         p.ColorLayers[index].SlopeMax = v.y;
                     },
                     p => new Vector2(p.ColorLayers[index].SlopeMin, p.ColorLayers[index].SlopeMax));
-
-                card.R.RegisterValueChangedCallback(_ => RefreshSwatch(card));
-                card.G.RegisterValueChangedCallback(_ => RefreshSwatch(card));
-                card.B.RegisterValueChangedCallback(_ => RefreshSwatch(card));
             }
         }
 
@@ -246,27 +277,21 @@ namespace TerrainDemo
                 var card = new ColorCard
                 {
                     Root = new VisualElement(),
-                    Swatch = new VisualElement(),
-                    R = new Slider("R", 0f, 1f) { showInputField = true },
-                    G = new Slider("G", 0f, 1f) { showInputField = true },
-                    B = new Slider("B", 0f, 1f) { showInputField = true },
+                    Picker = new ColorPickerField(),
                     Height = new MinMaxSlider("Height", 0f, 1f, 0f, 1f),
                     Slope = new MinMaxSlider("Slope", 0f, 1f, 0f, 1f),
                 };
+                card.Picker.ExpandRequested += TogglePicker;
 
                 var header = new VisualElement();
                 header.AddToClassList("color-card-header");
                 var title = new Label($"Color {i + 1}");
                 title.AddToClassList("color-card-title");
-                card.Swatch.AddToClassList("color-swatch");
                 header.Add(title);
-                header.Add(card.Swatch);
 
                 card.Root.AddToClassList("color-card");
                 card.Root.Add(header);
-                card.Root.Add(card.R);
-                card.Root.Add(card.G);
-                card.Root.Add(card.B);
+                card.Root.Add(card.Picker);
                 card.Root.Add(card.Height);
                 card.Root.Add(card.Slope);
 
@@ -281,13 +306,113 @@ namespace TerrainDemo
             for (int i = 0; i < _colorCards.Count; i++)
             {
                 _colorCards[i].Root.style.display = i < count ? DisplayStyle.Flex : DisplayStyle.None;
-                RefreshSwatch(_colorCards[i]);
             }
         }
 
-        private static void RefreshSwatch(ColorCard card)
+        private void TogglePicker(ColorPickerField source)
         {
-            card.Swatch.style.backgroundColor = new Color(card.R.value, card.G.value, card.B.value);
+            bool open = !source.Expanded;
+            foreach (ColorCard card in _colorCards) card.Picker.SetExpanded(card.Picker == source && open);
+        }
+
+        private void WireViewMode()
+        {
+            if (_viewButton == null) return;
+            if (generator == null)
+            {
+                _viewButton.SetEnabled(false);
+                return;
+            }
+            _wireframe = generator.GetComponent<TerrainWireframe>();
+            if (_wireframe == null) _wireframe = generator.gameObject.AddComponent<TerrainWireframe>();
+            _wireframe.ModeChanged -= UpdateViewButton;
+            _wireframe.ModeChanged += UpdateViewButton;
+            _viewButton.clicked += _wireframe.CycleMode;
+            UpdateViewButton();
+        }
+
+        private void UpdateViewButton()
+        {
+            if (_viewButton == null || _wireframe == null) return;
+            _viewButton.text = _wireframe.Mode switch
+            {
+                ViewMode.ShadedWireframe => "View: Shaded + Wire",
+                ViewMode.Wireframe => "View: Wireframe",
+                _ => "View: Shaded",
+            };
+        }
+
+        private void WireTooltips(VisualElement root)
+        {
+            if (_tooltip == null) return;
+            _tooltip.pickingMode = PickingMode.Ignore;
+            _tooltip.style.display = DisplayStyle.None;
+
+            foreach (KeyValuePair<string, string> entry in Descriptions)
+            {
+                RegisterTooltip(root.Q(entry.Key), entry.Value);
+            }
+            foreach (ColorCard card in _colorCards)
+            {
+                RegisterTooltip(card.Picker, PickerDescription);
+                RegisterTooltip(card.Height, HeightRangeDescription);
+                RegisterTooltip(card.Slope, SlopeRangeDescription);
+            }
+        }
+
+        private void RegisterTooltip(VisualElement target, string text)
+        {
+            if (target == null) return;
+            target.RegisterCallback<PointerEnterEvent>(e =>
+            {
+                _tooltipTarget = target;
+                _tooltipPosition = e.position;
+                _tooltip.text = text;
+                _tooltipTimer?.Pause();
+                _tooltipTimer = _tooltip.schedule.Execute(ShowTooltip).StartingIn(TooltipDelayMs);
+            });
+            target.RegisterCallback<PointerMoveEvent>(e =>
+            {
+                if (_tooltipTarget != target) return;
+                _tooltipPosition = e.position;
+                if (_tooltip.style.display == DisplayStyle.Flex) PositionTooltip();
+            });
+            target.RegisterCallback<PointerLeaveEvent>(_ =>
+            {
+                if (_tooltipTarget == target) HideTooltip();
+            });
+            target.RegisterCallback<PointerDownEvent>(_ => HideTooltip(), TrickleDown.TrickleDown);
+        }
+
+        private void ShowTooltip()
+        {
+            if (_tooltipTarget == null) return;
+            _tooltip.style.display = DisplayStyle.Flex;
+            _tooltip.BringToFront();
+            PositionTooltip();
+        }
+
+        private void HideTooltip()
+        {
+            _tooltipTimer?.Pause();
+            _tooltipTarget = null;
+            if (_tooltip != null) _tooltip.style.display = DisplayStyle.None;
+        }
+
+        private void PositionTooltip()
+        {
+            float width = float.IsNaN(_tooltip.layout.width) || _tooltip.layout.width <= 0f ? 260f : _tooltip.layout.width;
+            float height = float.IsNaN(_tooltip.layout.height) || _tooltip.layout.height <= 0f ? 60f : _tooltip.layout.height;
+            float maxX = _root.layout.width - width - 8f;
+            float maxY = _root.layout.height - height - 8f;
+
+            float x = _tooltipPosition.x + 16f;
+            float y = _tooltipPosition.y + 18f;
+            if (x > maxX) x = _tooltipPosition.x - width - 12f;
+            if (y > maxY) y = _tooltipPosition.y - height - 12f;
+
+            _tooltip.style.left = Mathf.Max(8f, x);
+            _tooltip.style.top = Mathf.Max(8f, y);
         }
 
         private void Bind<TValue>(BaseField<TValue> field, System.Action<TerrainParams, TValue> set, System.Func<TerrainParams, TValue> get)

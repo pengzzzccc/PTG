@@ -89,6 +89,37 @@ namespace TerrainDemo.Core
             return mesh;
         }
 
+        public static int[] BuildWireIndices(int resolution)
+        {
+            int cells = resolution - 1;
+            var indices = new int[2 * (2 * resolution * cells + cells * cells)];
+            int t = 0;
+
+            for (int z = 0; z < resolution; z++)
+            {
+                for (int x = 0; x < resolution; x++)
+                {
+                    int i = z * resolution + x;
+                    if (x < cells)
+                    {
+                        indices[t++] = i;
+                        indices[t++] = i + 1;
+                    }
+                    if (z < cells)
+                    {
+                        indices[t++] = i;
+                        indices[t++] = i + resolution;
+                    }
+                    if (x < cells && z < cells)
+                    {
+                        indices[t++] = i + resolution;
+                        indices[t++] = i + 1;
+                    }
+                }
+            }
+            return indices;
+        }
+
         public static Color[] BuildColors(float[,] heights, float[] slopes, TerrainParams parameters, bool parallel = true)
         {
             int resolution = parameters.Resolution;

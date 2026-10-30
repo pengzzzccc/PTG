@@ -190,3 +190,114 @@
     font-size: 12px;
     white-space: normal;
 }
+
+.footer-row .view-button {
+    margin-right: auto;
+    min-width: 140px;
+}
+
+.color-picker {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.color-picker__row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.color-picker__swatch {
+    width: 44px;
+    height: 20px;
+    margin-right: 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.6);
+    border-radius: 4px;
+}
+
+.color-picker__swatch:hover,
+.color-picker__swatch--open {
+    border-color: rgb(120, 180, 255);
+    border-width: 2px;
+}
+
+.color-picker__hex {
+    flex-grow: 1;
+    margin: 0;
+}
+
+.color-picker__panel {
+    margin-top: 6px;
+    padding: 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.color-picker__sv {
+    height: 110px;
+    border-radius: 3px;
+}
+
+.color-picker__marker {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    margin-left: -6px;
+    margin-top: -6px;
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+    border-radius: 6px;
+}
+
+.color-picker__hue {
+    height: 12px;
+    margin-top: 8px;
+    border-radius: 3px;
+}
+
+.color-picker__hue-marker {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 6px;
+    margin-left: -3px;
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+    border-radius: 2px;
+}
+
+.color-picker__quick {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.color-picker__chip {
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+    margin-bottom: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.5);
+    border-radius: 3px;
+}
+
+.color-picker__chip:hover {
+    border-color: rgb(120, 180, 255);
+    border-width: 2px;
+}
+
+.tooltip {
+    position: absolute;
+    max-width: 260px;
+    padding: 6px 9px;
+    background-color: rgba(0, 0, 0, 0.85);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    color: rgb(240, 240, 240);
+    font-size: 12px;
+    white-space: normal;
+}

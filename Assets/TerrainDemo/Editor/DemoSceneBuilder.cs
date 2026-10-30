@@ -14,13 +14,15 @@ namespace TerrainDemo.Editor
         private const string PanelSettingsPath = "Assets/Settings/DemoPanelSettings.asset";
         private const string UxmlPath = "Assets/TerrainDemo/Runtime/UI/TerrainDemoUI.uxml";
         private const string UssPath = "Assets/TerrainDemo/Runtime/UI/TerrainDemoUI.uss";
+        private const string WireShaderPath = "Assets/TerrainDemo/Shaders/PTGWireframe.shader";
 
         [MenuItem("Terrain Demo/Setup Scene")]
         public static void SetupScene()
         {
             Cleanup();
 
-            GameObject terrain = new GameObject(TerrainName, typeof(MeshFilter), typeof(MeshRenderer), typeof(TerrainGenerator), typeof(PerfLog));
+            GameObject terrain = new GameObject(TerrainName, typeof(MeshFilter), typeof(MeshRenderer), typeof(TerrainGenerator), typeof(PerfLog), typeof(TerrainWireframe));
+            terrain.GetComponent<TerrainWireframe>().WireShader = AssetDatabase.LoadAssetAtPath<Shader>(WireShaderPath);
             Undo.RegisterCreatedObjectUndo(terrain, "Setup Terrain Demo");
             Shader litShader = Shader.Find("Universal Render Pipeline/Lit");
             terrain.GetComponent<MeshRenderer>().sharedMaterial =

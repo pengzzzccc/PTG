@@ -94,7 +94,7 @@ The evaluation direction and plan were defined this week; for further details, p
 
 
 ## 26/10/2026 - 01/11/2026
-### Total hours: 10h
+### Total hours: 20h
 This week, I created a PrefLog utility for performance evaluation; it records the time taken for each step during terrain generation (measured in milliseconds). Initial analysis revealed three primary performance bottlenecks: heightmap generation, mesh data generation, and collider generation. Furthermore, the performance cost increases exponentially with the resolution, as all three processes have a time complexity of O(n²).
 
 To address this, I plan to implement multi-core parallel processing (utilizing the CPU), remove unnecessary collider generation, and cache the heightmaps to accelerate color-filling operations.
@@ -106,6 +106,14 @@ First, I removed unnecessary collider generation and introduced heightmap data c
 Second, I implemented CPU-based parallel processing.
 In total, these changes have resulted in a 13.x-fold performance improvement.
 
+Subsequently, two brief rounds of playtesting were conducted (see the appendix for the playtest forms), yielding two pieces of feedback.
+
+- 1.A wireframe version of the terrain. A short description for each adjusting property when hovering over it using a mouse.
+- 2.I wish the color palette were adjustable; otherwise, everything else is fine.
+
+Then, based on feedback, a color palette and a grid display feature were added.
+
+![alt text](image-1.png)
 
 **AI Use:**
 Opus5.5, Develop data analysis tools to visualize and compare performance data.
