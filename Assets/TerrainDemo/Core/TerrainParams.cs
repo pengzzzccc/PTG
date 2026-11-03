@@ -4,6 +4,13 @@ using UnityEngine;
 
 namespace TerrainDemo.Core
 {
+    public enum TerrainShape
+    {
+        Flat,
+        Island,
+        Planet,
+    }
+
     [Serializable]
     public class TerrainParams
     {
@@ -27,11 +34,15 @@ namespace TerrainDemo.Core
 
         [Range(0, 64)] public int TerraceLevels = 0;
 
-        public FractalMode Mode = FractalMode.BasicFbm;
+        public float Offset = 0.9f;
 
-        public float Offset = 0.7f;
+        public float Gain = 1.2f;
 
-        public float Gain = 2f;
+        public TerrainShape Shape = TerrainShape.Flat;
+
+        [Range(0f, 1f)] public float IslandRadius = 0.8f;
+
+        [Range(0.01f, 1f)] public float IslandFalloff = 0.25f;
 
         public const int MaxColorLayers = 8;
 
@@ -68,9 +79,11 @@ namespace TerrainDemo.Core
                 Persistence = Persistence,
                 HeightExponent = HeightExponent,
                 TerraceLevels = TerraceLevels,
-                Mode = Mode,
                 Offset = Offset,
                 Gain = Gain,
+                Shape = Shape,
+                IslandRadius = IslandRadius,
+                IslandFalloff = IslandFalloff,
             };
         }
 
@@ -87,9 +100,11 @@ namespace TerrainDemo.Core
                 && Persistence == other.Persistence
                 && HeightExponent == other.HeightExponent
                 && TerraceLevels == other.TerraceLevels
-                && Mode == other.Mode
                 && Offset == other.Offset
-                && Gain == other.Gain;
+                && Gain == other.Gain
+                && Shape == other.Shape
+                && IslandRadius == other.IslandRadius
+                && IslandFalloff == other.IslandFalloff;
         }
 
         public void EnsureColorLayers()
@@ -110,6 +125,8 @@ namespace TerrainDemo.Core
                 Persistence = 0.45f,
                 HeightScale = 18f,
                 HeightExponent = 1.2f,
+                Offset = 0.9f,
+                Gain = 0.8f,
             };
         }
 
@@ -124,7 +141,6 @@ namespace TerrainDemo.Core
                 Persistence = 0.43f,
                 HeightScale = 45f,
                 HeightExponent = 2.33f,
-                Mode = FractalMode.Multifractal,
                 Offset = 1.165f,
                 Gain = 2.64f,
             };
@@ -141,6 +157,8 @@ namespace TerrainDemo.Core
                 HeightScale = 30f,
                 HeightExponent = 1f,
                 TerraceLevels = 8,
+                Offset = 0.9f,
+                Gain = 1f,
             };
         }
     }

@@ -1,0 +1,17 @@
+# PTG performance log
+# unity=6000.0.27f1 platform=WindowsEditor editor=True
+# cpu=13th Gen Intel(R) Core(TM) i9-13900HX cores=32 sysMemMB=65275
+# gpu=NVIDIA GeForce RTX 4060 Laptop GPU os=Windows 11  (10.0.26200) 64bit quality=PC
+time_s,frame,seed,resolution,vertices,mode,octaves,color_count,path,parallel,height_ms,mesh_ms,color_ms,upload_ms,normals_ms,bounds_ms,total_ms
+19.976,6108,1,257,66049,Multifractal,5,8,full,1,8.534,1.837,2.532,2.212,1.104,0.470,16.688
+25.277,7907,1,257,396294,Multifractal-Planet,5,8,full,1,33.127,29.890,6.011,11.723,0.785,2.729,84.263
+39.018,12634,1,257,396294,Multifractal-Planet,4,8,full,1,26.924,64.759,5.173,11.752,0.651,2.804,112.064
+41.072,13295,1,257,396294,Multifractal-Planet,5,8,full,1,32.457,23.139,5.163,12.338,0.640,2.775,76.512
+42.903,13918,1,257,66049,Multifractal,5,8,full,1,3.356,0.975,0.943,1.777,0.860,0.422,8.333
+48.510,15918,52433026,257,66049,Multifractal,5,8,full,1,3.341,1.323,1.065,1.448,0.953,0.489,8.618
+48.915,16074,1234960855,257,66049,Multifractal,5,8,full,1,3.492,1.191,1.254,1.441,0.932,0.480,8.789
+49.230,16198,1677378165,257,66049,Multifractal,5,8,full,1,3.399,1.200,0.944,1.451,0.912,0.464,8.370
+49.531,16313,1343554085,257,66049,Multifractal,5,8,full,1,3.273,1.342,0.900,1.385,0.907,0.464,8.271
+49.832,16426,360023688,257,66049,Multifractal,5,8,full,1,3.313,1.219,0.793,1.498,0.887,0.433,8.143
+50.137,16537,2032717050,257,66049,Multifractal,5,8,full,1,3.427,4.873,2.233,1.372,0.892,0.442,13.238
+50.433,16625,577027754,257,66049,Multifractal,5,8,full,1,3.415,0.889,0.796,1.410,0.914,0.464,7.887

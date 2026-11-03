@@ -301,3 +301,29 @@
     font-size: 12px;
     white-space: normal;
 }
+
+.top-bar {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    translate: -50% 0;
+    flex-direction: row;
+}
+
+.top-bar-button {
+    margin: 0 3px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: rgb(235, 235, 235);
+    font-size: 11px;
+}
+
+.top-bar-button:hover {
+    background-color: rgba(0, 0, 0, 0.75);
+}
+
+.panel-scroll EnumField {
+    margin-top: 4px;
+}

@@ -10,12 +10,11 @@ namespace TerrainDemo.Tests
     {
         private const float RangeEps = 1e-4f;
 
-        private static TerrainParams MakeParams(int seed, int resolution, FractalMode mode)
+        private static TerrainParams MakeParams(int seed, int resolution)
         {
             return new TerrainParams
             {
                 Seed = seed,
-                Mode = mode,
                 Resolution = resolution,
                 WorldSize = 200f,
                 HeightScale = 30f,
@@ -45,8 +44,8 @@ namespace TerrainDemo.Tests
         [Test]
         public void Multifractal_SameSeed_ReproducesValues()
         {
-            var noiseA = new FractalNoise2D(42, 6, 2f, 0.5f, 8f, FractalMode.Multifractal, 0.7f, 2f);
-            var noiseB = new FractalNoise2D(42, 6, 2f, 0.5f, 8f, FractalMode.Multifractal, 0.7f, 2f);
+            var noiseA = new FractalNoise2D(42, 6, 2f, 0.5f, 8f, 0.7f, 2f);
+            var noiseB = new FractalNoise2D(42, 6, 2f, 0.5f, 8f, 0.7f, 2f);
             Vector2[] probePoints =
             {
                 new Vector2(0.5f, 0.5f), new Vector2(13.7f, 2.2f), new Vector2(-8.3f, 55.5f),
@@ -61,7 +60,7 @@ namespace TerrainDemo.Tests
         [Test]
         public void Multifractal_DiffersFromBasicFbmOnSameSeed()
         {
-            var feedback = new FractalNoise2D(5, 5, 2f, 0.5f, 8f, FractalMode.Multifractal, 0.7f, 2f);
+            var feedback = new FractalNoise2D(5, 5, 2f, 0.5f, 8f, 0.7f, 2f);
             var basic = new FractalNoise2D(5, 5, 2f, 0.5f, 8f);
             float maxDiff = 0f;
             for (int y = 0; y < 33; y++)
@@ -77,7 +76,7 @@ namespace TerrainDemo.Tests
         [Test]
         public void Multifractal_DetailGrowsWithAltitude()
         {
-            var noise = new FractalNoise2D(7, 6, 2f, 0.5f, 4f, FractalMode.Multifractal, 0.7f, 2f);
+            var noise = new FractalNoise2D(7, 6, 2f, 0.5f, 4f, 0.7f, 2f);
             const int samples = 128;
             const float span = 64f;
             var values = new float[samples, samples];
@@ -112,7 +111,7 @@ namespace TerrainDemo.Tests
         [Test]
         public void Heightmap_Multifractal_IsDeterministicAndInRange()
         {
-            var parameters = MakeParams(1234, 65, FractalMode.Multifractal);
+            var parameters = MakeParams(1234, 65);
             float[,] first = HeightmapGenerator.Generate(parameters);
             float[,] second = HeightmapGenerator.Generate(parameters);
 
@@ -130,43 +129,14 @@ namespace TerrainDemo.Tests
                 }
             Debug.Log($"[Heightmap · Multifractal range] span [{min:F4}, {max:F4}] ⊂ [0,1] ✓");
 
-            float[,] basic = HeightmapGenerator.Generate(MakeParams(1234, 65, FractalMode.BasicFbm));
+            var basic = new FractalNoise2D(parameters.Seed, parameters.Octaves, parameters.Lacunarity, parameters.Persistence, parameters.Scale);
+            float cell = parameters.WorldSize / 64f;
             float maxDiff = 0f;
             for (int z = 0; z < 65; z++)
                 for (int x = 0; x < 65; x++)
-                    maxDiff = Mathf.Max(maxDiff, Mathf.Abs(first[z, x] - basic[z, x]));
-            Debug.Log($"[Heightmap · mode separation] same seed=1234, Multifractal vs BasicFbm: max difference {maxDiff:F4} (required > 0.05)");
-            Assert.Greater(maxDiff, 0.05f, "Same seed produced nearly identical heightmaps for both modes; the Mode field is not taking effect");
-        }
-
-        [Test]
-        public void Heightmap_RidgedMultifractal_IsDeterministicAndInRange()
-        {
-            var parameters = MakeParams(1234, 65, FractalMode.RidgedMultifractal);
-            float[,] first = HeightmapGenerator.Generate(parameters);
-            float[,] second = HeightmapGenerator.Generate(parameters);
-
-            string hashFirst = FnvHash(first), hashSecond = FnvHash(second);
-            Debug.Log($"[Heightmap · Ridged determinism] seed=1234; hash A={hashFirst} B={hashSecond}");
-            Assert.AreEqual(hashFirst, hashSecond, "Two RidgedMultifractal runs produced different hashes; determinism broken");
-
-            float min = float.MaxValue, max = float.MinValue;
-            for (int z = 0; z < 65; z++)
-                for (int x = 0; x < 65; x++)
-                {
-                    Assert.That(first[z, x], Is.InRange(-RangeEps, 1f + RangeEps), "Ridged heightmap has an out-of-range value");
-                    min = Mathf.Min(min, first[z, x]);
-                    max = Mathf.Max(max, first[z, x]);
-                }
-            Debug.Log($"[Heightmap · Ridged range] span [{min:F4}, {max:F4}] ⊂ [0,1] ✓");
-
-            float[,] plain = HeightmapGenerator.Generate(MakeParams(1234, 65, FractalMode.Multifractal));
-            float maxDiff = 0f;
-            for (int z = 0; z < 65; z++)
-                for (int x = 0; x < 65; x++)
-                    maxDiff = Mathf.Max(maxDiff, Mathf.Abs(first[z, x] - plain[z, x]));
-            Debug.Log($"[Heightmap · variant separation] same seed=1234, Ridged vs Multifractal: max difference {maxDiff:F4} (required > 0.01)");
-            Assert.Greater(maxDiff, 0.01f, "Ridged and plain Multifractal produced nearly identical maps; the ridge shaping is not taking effect");
+                    maxDiff = Mathf.Max(maxDiff, Mathf.Abs(first[z, x] - basic.Sample(x * cell, z * cell)));
+            Debug.Log($"[Heightmap · fBm separation] same seed=1234, Multifractal heightmap vs plain fBm: max difference {maxDiff:F4} (required > 0.05)");
+            Assert.Greater(maxDiff, 0.05f, "The heightmap matches plain fBm; the altitude feedback is not taking effect");
         }
 
         [Test]
@@ -190,7 +160,7 @@ namespace TerrainDemo.Tests
                 }
             Debug.Log($"[Preset · Rugged Peaks] res={parameters.Resolution}, multifractal (altitude feedback), {stopwatch.Elapsed.TotalMilliseconds:F1} ms, "
                       + $"span [{min:F4}, {max:F4}] ⊂ [0,1] ✓");
-            Assert.AreEqual(FractalMode.Multifractal, parameters.Mode, "The RuggedPeaks preset should showcase the multifractal altitude-feedback mode");
+            Assert.Greater(parameters.Gain, 2f, "The RuggedPeaks preset should showcase strong altitude feedback");
         }
     }
 }

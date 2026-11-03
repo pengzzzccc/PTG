@@ -13,6 +13,9 @@
             </ui:VisualElement>
 
             <ui:ScrollView name="panel-scroll" class="panel-scroll">
+                <ui:EnumField label="Shape" name="shape-field" />
+                <ui:Slider label="Island Radius" name="island-radius-slider" low-value="0.1" high-value="1" show-input-field="true" />
+                <ui:Slider label="Island Falloff" name="island-falloff-slider" low-value="0.01" high-value="1" show-input-field="true" />
                 <ui:SliderInt label="Resolution" name="resolution-slider" low-value="33" high-value="513" show-input-field="true" />
                 <ui:Slider label="Height Scale (m)" name="height-scale-slider" low-value="5" high-value="100" show-input-field="true" />
                 <ui:Slider label="Wavelength (m)" name="scale-slider" low-value="20" high-value="300" show-input-field="true" />
@@ -20,7 +23,7 @@
                 <ui:Slider label="Lacunarity" name="lacunarity-slider" low-value="1.2" high-value="4" show-input-field="true" />
                 <ui:Slider label="Persistence" name="persistence-slider" low-value="0.05" high-value="0.95" show-input-field="true" />
                 <ui:Slider label="Feedback Offset" name="offset-slider" low-value="0" high-value="1.5" show-input-field="true" />
-                <ui:Slider label="Feedback Gain" name="gain-slider" low-value="0.5" high-value="4" show-input-field="true" />
+                <ui:Slider label="Feedback Gain" name="gain-slider" low-value="0" high-value="4" show-input-field="true" />
                 <ui:Slider label="Height Exponent" name="exponent-slider" low-value="0.5" high-value="4" show-input-field="true" />
                 <ui:SliderInt label="Terrace Levels" name="terrace-slider" low-value="0" high-value="64" show-input-field="true" />
             </ui:ScrollView>
@@ -43,5 +46,9 @@
     </ui:VisualElement>
 
     <ui:Label text="No terrain generated yet" name="stats-label" class="stats" picking-mode="Ignore" />
+    <ui:VisualElement name="top-bar" class="top-bar" picking-mode="Ignore">
+        <ui:Button text="Camera: Orbit (C)" name="camera-mode-button" class="top-bar-button" />
+        <ui:Button text="Hide UI (H)" name="ui-toggle-button" class="top-bar-button" />
+    </ui:VisualElement>
     <ui:Label name="tooltip-label" class="tooltip" picking-mode="Ignore" />
 </ui:UXML>

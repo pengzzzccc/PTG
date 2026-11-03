@@ -33,12 +33,17 @@ namespace TerrainDemo
 
         public static bool IsTyping { get; private set; }
 
+        public static bool PointerOverUI { get; private set; }
+
         private VisualElement _root;
 
         private IntegerField _seedField;
         private Button _hillsButton;
         private Button _peaksButton;
         private Button _mesasButton;
+        private EnumField _shapeField;
+        private Slider _islandRadiusSlider;
+        private Slider _islandFalloffSlider;
         private SliderInt _resolutionSlider;
         private Slider _heightScaleSlider;
         private Slider _scaleSlider;
@@ -59,6 +64,14 @@ namespace TerrainDemo
         private Vector2 _tooltipPosition;
         private Button _viewButton;
         private TerrainWireframe _wireframe;
+        private Button _uiToggleButton;
+        private Button _cameraButton;
+        private FlyCamera _flyCamera;
+        private VisualElement _demoPanel;
+        private VisualElement _colorPanel;
+        private bool _uiHidden;
+
+        private const int FlatMaxResolution = 513;
 
         private const long TooltipDelayMs = 400;
 
@@ -66,21 +79,26 @@ namespace TerrainDemo
         {
             { "seed-field", "The number that drives all randomness. The same seed with the same settings always rebuilds exactly the same terrain." },
             { "random-button", "Pick a new random seed and regenerate the terrain." },
-            { "preset-hills", "Rolling Hills: few noise layers and gentle heights for soft, wide hills. Your colour settings are kept." },
-            { "preset-peaks", "Rugged Peaks: multifractal noise where high ground gets rougher while valleys stay smooth. Your colour settings are kept." },
-            { "preset-mesas", "Terraced Mesas: heights snapped into flat steps to form plateaus. Your colour settings are kept." },
-            { "resolution-slider", "Number of vertices along each side of the terrain. Higher values show finer detail but take longer, because the cost grows with the square." },
+            { "preset-hills", "Rolling Hills: few noise layers, low feedback and gentle heights for soft, wide hills. Your colours and shape are kept." },
+            { "preset-peaks", "Rugged Peaks: strong altitude feedback, so high ground gets rough while valleys stay smooth. Your colours and shape are kept." },
+            { "preset-mesas", "Terraced Mesas: heights snapped into flat steps to form plateaus. Your colours and shape are kept." },
+            { "shape-field", "Base shape of the terrain. Flat is a square patch, Island fades the edges down into the sea, Planet wraps the terrain around a sphere." },
+            { "island-radius-slider", "Island only. How far the land reaches from the centre, from 0 (centre) to 1 (edge of the square)." },
+            { "island-falloff-slider", "Island only. Width of the coastline where land slopes down into the sea. Small values give steep cliffs, large values give long beaches." },
+            { "resolution-slider", "Number of vertices along each side of the terrain (each cube face on a planet, up to 257). Higher values show finer detail but take longer, because the cost grows with the square." },
             { "height-scale-slider", "Height of the highest possible point, in metres." },
             { "scale-slider", "Size of the largest landforms, in metres. Larger values give broader, gentler hills; smaller values give tighter, busier terrain." },
             { "octaves-slider", "Number of noise layers stacked on top of each other. More octaves add finer detail but cost more time." },
             { "lacunarity-slider", "How much finer each noise layer is than the previous one. Higher values add small details faster." },
             { "persistence-slider", "How strong each finer layer is compared with the previous one. Higher values make the surface rougher and noisier." },
-            { "offset-slider", "Rugged Peaks only. Lifts the noise before the altitude feedback. Higher values give fuller, bulkier mountains; lower values give broken, patchy ground." },
-            { "gain-slider", "Rugged Peaks only. Strength of the altitude feedback. Higher values make peaks rugged while low ground stays smooth." },
+            { "offset-slider", "Lifts every noise layer before the altitude feedback. Higher values give fuller, bulkier land; lower values give broken, patchy ground." },
+            { "gain-slider", "Strength of the altitude feedback: how much the height so far boosts the finer layers. Higher values make peaks rugged while low ground stays smooth. 0 keeps only the broadest layer." },
             { "exponent-slider", "Reshapes the height curve. Above 1 flattens valleys and sharpens peaks; below 1 does the opposite." },
             { "terrace-slider", "Snaps heights into this many flat steps to make terraces. 0 turns it off." },
             { "generate-button", "Rebuild the whole terrain now with the current settings." },
             { "view-mode-button", "Switch the view: shaded surface, shaded surface with wireframe, or wireframe only." },
+            { "ui-toggle-button", "Hide or show all panels so you can look at the terrain. Shortcut: H." },
+            { "camera-mode-button", "Switch the camera. Orbit circles the terrain: right-drag to rotate, scroll or W/S to zoom, A/D and Q/E to turn. Free flies anywhere: right-drag to look, WASD to move, Q/E for down and up. Shortcut: C." },
             { "color-count-slider", "How many colour layers are used. Layers lower in the list are painted on top of layers above them." },
         };
 
@@ -126,10 +144,13 @@ namespace TerrainDemo
 
             if (!QueryControls(root)) return;
             _root = root;
+            _shapeField.Init(TerrainShape.Flat);
             root.RegisterCallback<NavigationMoveEvent>(evt => evt.StopPropagation(), TrickleDown.TrickleDown);
             BuildColorCards();
             WireSpecialControls(root);
             WireViewMode();
+            WireUiToggle();
+            WireCameraMode();
             WireTooltips(root);
             if (generator != null) generator.Parameters.EnsureColorLayers();
             BuildBindings();
@@ -139,6 +160,12 @@ namespace TerrainDemo
         private void Update()
         {
             UpdateFocus();
+            Keyboard keyboard = Keyboard.current;
+            if (_root != null && keyboard != null && !IsTyping)
+            {
+                if (keyboard.hKey.wasPressedThisFrame) ToggleUi();
+                if (keyboard.cKey.wasPressedThisFrame && _flyCamera != null) _flyCamera.ToggleMode();
+            }
             if (generator == null) return;
 
             if (_dirty && Time.unscaledTime - _lastGenerateTime >= RegenerateIntervalSeconds)
@@ -163,10 +190,12 @@ namespace TerrainDemo
             if (focusController == null)
             {
                 IsTyping = false;
+                PointerOverUI = false;
                 return;
             }
 
             Mouse mouse = Mouse.current;
+            PointerOverUI = mouse != null && IsOverPanel(mouse.position.ReadValue());
             if (mouse != null && mouse.rightButton.wasPressedThisFrame)
             {
                 focusController.focusedElement?.Blur();
@@ -183,10 +212,21 @@ namespace TerrainDemo
             }
         }
 
+        private bool IsOverPanel(Vector2 screenPosition)
+        {
+            IPanel panel = _root?.panel;
+            if (panel == null) return false;
+            Vector2 panelPosition = RuntimePanelUtils.ScreenToPanel(panel, new Vector2(screenPosition.x, Screen.height - screenPosition.y));
+            VisualElement picked = panel.Pick(panelPosition);
+            return picked != null && picked != _root && _root.Contains(picked);
+        }
+
         private void OnDisable()
         {
             IsTyping = false;
+            PointerOverUI = false;
             if (_wireframe != null) _wireframe.ModeChanged -= UpdateViewButton;
+            if (_flyCamera != null) _flyCamera.ModeChanged -= UpdateCameraButton;
         }
 
         private bool QueryControls(VisualElement root)
@@ -195,6 +235,9 @@ namespace TerrainDemo
             _hillsButton = root.Q<Button>("preset-hills");
             _peaksButton = root.Q<Button>("preset-peaks");
             _mesasButton = root.Q<Button>("preset-mesas");
+            _shapeField = root.Q<EnumField>("shape-field");
+            _islandRadiusSlider = root.Q<Slider>("island-radius-slider");
+            _islandFalloffSlider = root.Q<Slider>("island-falloff-slider");
             _resolutionSlider = root.Q<SliderInt>("resolution-slider");
             _heightScaleSlider = root.Q<Slider>("height-scale-slider");
             _scaleSlider = root.Q<Slider>("scale-slider");
@@ -210,10 +253,15 @@ namespace TerrainDemo
             _colorList = root.Q<ScrollView>("color-list");
             _tooltip = root.Q<Label>("tooltip-label");
             _viewButton = root.Q<Button>("view-mode-button");
+            _uiToggleButton = root.Q<Button>("ui-toggle-button");
+            _cameraButton = root.Q<Button>("camera-mode-button");
+            _demoPanel = root.Q("demo-panel");
+            _colorPanel = root.Q("color-panel");
 
             bool complete = _seedField != null
                 && _colorCountSlider != null && _colorList != null
                 && _hillsButton != null && _peaksButton != null && _mesasButton != null
+                && _shapeField != null && _islandRadiusSlider != null && _islandFalloffSlider != null
                 && _resolutionSlider != null && _heightScaleSlider != null
                 && _scaleSlider != null && _octavesSlider != null && _lacunaritySlider != null
                 && _persistenceSlider != null && _offsetSlider != null && _gainSlider != null
@@ -230,6 +278,10 @@ namespace TerrainDemo
             _bindings.Clear();
 
             Bind(_seedField, (p, v) => p.Seed = v, p => p.Seed);
+            Bind(_shapeField, (p, v) => p.Shape = (TerrainShape)v, p => p.Shape);
+            Bind(_islandRadiusSlider, (p, v) => p.IslandRadius = v, p => p.IslandRadius);
+            Bind(_islandFalloffSlider, (p, v) => p.IslandFalloff = v, p => p.IslandFalloff);
+            _shapeField.RegisterValueChangedCallback(_ => RefreshShapeControls());
             Bind(_resolutionSlider, (p, v) => p.Resolution = v, p => p.Resolution);
             Bind(_heightScaleSlider, (p, v) => p.HeightScale = v, p => p.HeightScale);
             Bind(_scaleSlider, (p, v) => p.Scale = v, p => p.Scale);
@@ -306,6 +358,64 @@ namespace TerrainDemo
             for (int i = 0; i < _colorCards.Count; i++)
             {
                 _colorCards[i].Root.style.display = i < count ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+        }
+
+        private void RefreshShapeControls()
+        {
+            TerrainShape shape = _shapeField.value is TerrainShape value ? value : TerrainShape.Flat;
+            DisplayStyle islandDisplay = shape == TerrainShape.Island ? DisplayStyle.Flex : DisplayStyle.None;
+            _islandRadiusSlider.style.display = islandDisplay;
+            _islandFalloffSlider.style.display = islandDisplay;
+
+            int max = shape == TerrainShape.Planet ? PlanetBuilder.MaxResolution : FlatMaxResolution;
+            _resolutionSlider.highValue = max;
+            if (_resolutionSlider.value > max) _resolutionSlider.value = max;
+        }
+
+        private void WireUiToggle()
+        {
+            if (_uiToggleButton != null) _uiToggleButton.clicked += ToggleUi;
+            SetUiHidden(false);
+        }
+
+        private void WireCameraMode()
+        {
+            Camera main = Camera.main;
+            _flyCamera = main != null ? main.GetComponent<FlyCamera>() : null;
+            if (_flyCamera == null) _flyCamera = FindFirstObjectByType<FlyCamera>();
+            if (_cameraButton == null) return;
+            if (_flyCamera == null)
+            {
+                _cameraButton.SetEnabled(false);
+                return;
+            }
+            _flyCamera.ModeChanged -= UpdateCameraButton;
+            _flyCamera.ModeChanged += UpdateCameraButton;
+            _cameraButton.clicked += _flyCamera.ToggleMode;
+            UpdateCameraButton();
+        }
+
+        private void UpdateCameraButton()
+        {
+            if (_cameraButton == null || _flyCamera == null) return;
+            _cameraButton.text = _flyCamera.Mode == CameraMode.Orbit ? "Camera: Orbit (C)" : "Camera: Free (C)";
+        }
+
+        private void ToggleUi() => SetUiHidden(!_uiHidden);
+
+        private void SetUiHidden(bool hidden)
+        {
+            _uiHidden = hidden;
+            DisplayStyle display = hidden ? DisplayStyle.None : DisplayStyle.Flex;
+            if (_demoPanel != null) _demoPanel.style.display = display;
+            if (_colorPanel != null) _colorPanel.style.display = display;
+            if (_statsLabel != null) _statsLabel.style.display = display;
+            if (_uiToggleButton != null) _uiToggleButton.text = hidden ? "Show UI (H)" : "Hide UI (H)";
+            if (hidden)
+            {
+                HideTooltip();
+                _root?.focusController?.focusedElement?.Blur();
             }
         }
 
@@ -441,8 +551,12 @@ namespace TerrainDemo
         private void ApplyPreset(TerrainParams preset, Button source)
         {
             if (generator == null) return;
-            preset.ColorCount = generator.Parameters.ColorCount;
-            preset.ColorLayers = generator.Parameters.ColorLayers;
+            TerrainParams current = generator.Parameters;
+            preset.ColorCount = current.ColorCount;
+            preset.ColorLayers = current.ColorLayers;
+            preset.Shape = current.Shape;
+            preset.IslandRadius = current.IslandRadius;
+            preset.IslandFalloff = current.IslandFalloff;
             preset.EnsureColorLayers();
             generator.Parameters = preset;
             CopyParametersToControls(preset);
@@ -466,6 +580,7 @@ namespace TerrainDemo
         {
             foreach (Binding binding in _bindings) binding.ToControl(p);
             RefreshColorCards();
+            RefreshShapeControls();
         }
 
         private void ForceRegenerate()

@@ -40,9 +40,11 @@ namespace TerrainDemo
 
         private Vector3[] _vertices;
         private int _resolution;
+        private int _faces = 1;
         private bool _dirty = true;
         private int[] _indices;
         private int _indicesResolution;
+        private int _indicesFaces;
 
         private void Awake()
         {
@@ -64,10 +66,11 @@ namespace TerrainDemo
             ModeChanged?.Invoke();
         }
 
-        public void OnGeometryChanged(Vector3[] vertices, int resolution)
+        public void OnGeometryChanged(Vector3[] vertices, int resolution, int faces = 1)
         {
             _vertices = vertices;
             _resolution = resolution;
+            _faces = faces;
             _dirty = true;
             if (Mode != ViewMode.Shaded) Rebuild();
         }
@@ -110,14 +113,21 @@ namespace TerrainDemo
                 Mesh source = _terrainFilter != null ? _terrainFilter.sharedMesh : null;
                 if (source == null) return;
                 _vertices = source.vertices;
+                _faces = 1;
                 _resolution = Mathf.RoundToInt(Mathf.Sqrt(_vertices.Length));
+                if (_resolution * _resolution != _vertices.Length)
+                {
+                    _faces = PlanetBuilder.Faces;
+                    _resolution = Mathf.RoundToInt(Mathf.Sqrt(_vertices.Length / (float)_faces));
+                }
             }
-            if (_resolution < 2 || _resolution * _resolution != _vertices.Length) return;
+            if (_resolution < 2 || _faces * _resolution * _resolution != _vertices.Length) return;
 
-            if (_indices == null || _indicesResolution != _resolution)
+            if (_indices == null || _indicesResolution != _resolution || _indicesFaces != _faces)
             {
-                _indices = MeshDataBuilder.BuildWireIndices(_resolution);
+                _indices = MeshDataBuilder.BuildWireIndices(_resolution, _faces);
                 _indicesResolution = _resolution;
+                _indicesFaces = _faces;
             }
 
             _lineMesh.Clear();

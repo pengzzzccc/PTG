@@ -32,6 +32,10 @@ namespace TerrainDemo
 
         public bool LastWasRecolor { get; private set; }
 
+        public int VertexCount { get; private set; }
+
+        public int MeshResolution { get; private set; }
+
         public event Action Generated;
 
         private float[,] _cachedHeights;
@@ -67,12 +71,28 @@ namespace TerrainDemo
             LastWasRecolor = false;
             var clock = Stopwatch.StartNew();
 
-            float[,] heights = HeightmapGenerator.Generate(parameters, useParallel);
+            bool planet = parameters.Shape == TerrainShape.Planet;
+            int resolution = planet ? PlanetBuilder.ResolutionFor(parameters) : parameters.Resolution;
+            int faces = planet ? PlanetBuilder.Faces : 1;
+
+            float[,] heights;
+            float[,] padded = null;
+            if (planet)
+            {
+                padded = PlanetBuilder.GenerateHeights(parameters, useParallel);
+                heights = null;
+            }
+            else
+            {
+                heights = HeightmapGenerator.Generate(parameters, useParallel);
+            }
             clock.Stop();
             HeightMs = clock.Elapsed.TotalMilliseconds;
 
             clock.Restart();
-            MeshData meshData = MeshDataBuilder.BuildGeometry(heights, parameters, useParallel);
+            MeshData meshData = planet
+                ? PlanetBuilder.BuildGeometry(padded, parameters, out heights, useParallel)
+                : MeshDataBuilder.BuildGeometry(heights, parameters, useParallel);
             clock.Stop();
             MeshMs = clock.Elapsed.TotalMilliseconds;
 
@@ -106,7 +126,8 @@ namespace TerrainDemo
 
             // Recalculate Normals
             clock.Restart();
-            mesh.RecalculateNormals();
+            if (meshData.Normals != null) mesh.normals = meshData.Normals;
+            else mesh.RecalculateNormals();
             clock.Stop();
             NormalsMs = clock.Elapsed.TotalMilliseconds;
 
@@ -117,11 +138,13 @@ namespace TerrainDemo
             BoundsMs = clock.Elapsed.TotalMilliseconds;
 
             var wireframe = GetComponent<TerrainWireframe>();
-            if (wireframe != null) wireframe.OnGeometryChanged(meshData.Vertices, parameters.Resolution);
+            if (wireframe != null) wireframe.OnGeometryChanged(meshData.Vertices, resolution, faces);
 
+            VertexCount = meshData.Vertices.Length;
+            MeshResolution = resolution;
             LastStageStats = string.Format(CultureInfo.InvariantCulture,
-                "Height {0:F1}ms ({1}x{1}) | Mesh {2:F1}ms | Color {3:F1}ms | Upload {4:F1}ms | Normals {5:F1}ms | Bounds {6:F1}ms",
-                HeightMs, parameters.Resolution, MeshMs, ColorMs, UploadMs, NormalsMs, BoundsMs);
+                "Height {0:F1}ms ({7}{1}x{1}) | Mesh {2:F1}ms | Color {3:F1}ms | Upload {4:F1}ms | Normals {5:F1}ms | Bounds {6:F1}ms",
+                HeightMs, resolution, MeshMs, ColorMs, UploadMs, NormalsMs, BoundsMs, planet ? "6x" : "");
 
             Generated?.Invoke();
         }
@@ -146,7 +169,7 @@ namespace TerrainDemo
 
             LastStageStats = string.Format(CultureInfo.InvariantCulture,
                 "Recolor ({0}x{0}) | Color {1:F1}ms | Upload {2:F1}ms",
-                parameters.Resolution, ColorMs, UploadMs);
+                MeshResolution, ColorMs, UploadMs);
 
             Generated?.Invoke();
         }

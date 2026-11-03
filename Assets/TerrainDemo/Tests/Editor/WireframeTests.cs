@@ -46,6 +46,19 @@ namespace TerrainDemo.Tests
             }
         }
 
+        [TestCase(2)]
+        [TestCase(9)]
+        public void WireIndices_PlanetFaces_RepeatPerFace(int resolution)
+        {
+            int cells = resolution - 1;
+            int[] indices = MeshDataBuilder.BuildWireIndices(resolution, PlanetBuilder.Faces);
+            Assert.AreEqual(PlanetBuilder.Faces * 2 * (2 * resolution * cells + cells * cells), indices.Length);
+            foreach (int index in indices)
+            {
+                Assert.That(index, Is.InRange(0, PlanetBuilder.Faces * resolution * resolution - 1));
+            }
+        }
+
         private static long Key(int a, int b)
         {
             int lo = a < b ? a : b;

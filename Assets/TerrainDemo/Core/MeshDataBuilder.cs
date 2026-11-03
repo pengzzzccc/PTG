@@ -13,6 +13,8 @@ namespace TerrainDemo.Core
 
         public float[] Slopes;
 
+        public Vector3[] Normals;
+
         public Color[] colors;
     }
 
@@ -89,31 +91,36 @@ namespace TerrainDemo.Core
             return mesh;
         }
 
-        public static int[] BuildWireIndices(int resolution)
+        public static int[] BuildWireIndices(int resolution, int faces = 1)
         {
             int cells = resolution - 1;
-            var indices = new int[2 * (2 * resolution * cells + cells * cells)];
+            int perFace = 2 * (2 * resolution * cells + cells * cells);
+            var indices = new int[perFace * faces];
             int t = 0;
 
-            for (int z = 0; z < resolution; z++)
+            for (int f = 0; f < faces; f++)
             {
-                for (int x = 0; x < resolution; x++)
+                int start = f * resolution * resolution;
+                for (int z = 0; z < resolution; z++)
                 {
-                    int i = z * resolution + x;
-                    if (x < cells)
+                    for (int x = 0; x < resolution; x++)
                     {
-                        indices[t++] = i;
-                        indices[t++] = i + 1;
-                    }
-                    if (z < cells)
-                    {
-                        indices[t++] = i;
-                        indices[t++] = i + resolution;
-                    }
-                    if (x < cells && z < cells)
-                    {
-                        indices[t++] = i + resolution;
-                        indices[t++] = i + 1;
+                        int i = start + z * resolution + x;
+                        if (x < cells)
+                        {
+                            indices[t++] = i;
+                            indices[t++] = i + 1;
+                        }
+                        if (z < cells)
+                        {
+                            indices[t++] = i;
+                            indices[t++] = i + resolution;
+                        }
+                        if (x < cells && z < cells)
+                        {
+                            indices[t++] = i + resolution;
+                            indices[t++] = i + 1;
+                        }
                     }
                 }
             }
@@ -122,19 +129,20 @@ namespace TerrainDemo.Core
 
         public static Color[] BuildColors(float[,] heights, float[] slopes, TerrainParams parameters, bool parallel = true)
         {
-            int resolution = parameters.Resolution;
-            var colors = new Color[resolution * resolution];
+            int rows = heights.GetLength(0);
+            int columns = heights.GetLength(1);
+            var colors = new Color[rows * columns];
 
             List<ColorLayer> layers = parameters.ColorLayers;
             if (layers == null || layers.Count == 0) layers = TerrainParams.DefaultColorLayers();
             int layerCount = Mathf.Clamp(parameters.ColorCount, 1, layers.Count);
             LayerRange[] ranges = BuildRanges(layers, layerCount);
 
-            HeightmapGenerator.ForRows(resolution, parallel, z =>
+            HeightmapGenerator.ForRows(rows, parallel, z =>
             {
-                for (int x = 0; x < resolution; x++)
+                for (int x = 0; x < columns; x++)
                 {
-                    int index = z * resolution + x;
+                    int index = z * columns + x;
                     colors[index] = GetColor(heights[z, x], slopes[index], ranges);
                 }
             });

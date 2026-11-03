@@ -6,7 +6,7 @@ namespace TerrainDemo.Tests
 {
     public class ParallelTests
     {
-        private static TerrainParams MakeParams(FractalMode mode, int terrace = 0)
+        private static TerrainParams MakeParams(int terrace = 0, float offset = 0.7f, float gain = 2f, TerrainShape shape = TerrainShape.Flat)
         {
             return new TerrainParams
             {
@@ -20,19 +20,19 @@ namespace TerrainDemo.Tests
                 Persistence = 0.5f,
                 HeightExponent = 1.4f,
                 TerraceLevels = terrace,
-                Mode = mode,
-                Offset = mode == FractalMode.RidgedMultifractal ? 1f : 0.7f,
-                Gain = 2f,
+                Offset = offset,
+                Gain = gain,
+                Shape = shape,
             };
         }
 
-        [TestCase(FractalMode.BasicFbm, 0)]
-        [TestCase(FractalMode.BasicFbm, 8)]
-        [TestCase(FractalMode.Multifractal, 0)]
-        [TestCase(FractalMode.RidgedMultifractal, 0)]
-        public void Heightmap_ParallelMatchesSerial_Bitwise(FractalMode mode, int terrace)
+        [TestCase(0, 0.7f, 2f, TerrainShape.Flat)]
+        [TestCase(8, 0.7f, 2f, TerrainShape.Flat)]
+        [TestCase(0, 1.1f, 0.5f, TerrainShape.Flat)]
+        [TestCase(0, 0.9f, 1.2f, TerrainShape.Island)]
+        public void Heightmap_ParallelMatchesSerial_Bitwise(int terrace, float offset, float gain, TerrainShape shape)
         {
-            TerrainParams p = MakeParams(mode, terrace);
+            TerrainParams p = MakeParams(terrace, offset, gain, shape);
             float[,] serial = HeightmapGenerator.Generate(p, false);
             float[,] parallel = HeightmapGenerator.Generate(p, true);
 
@@ -48,7 +48,7 @@ namespace TerrainDemo.Tests
         [Test]
         public void Mesh_ParallelMatchesSerial_Bitwise()
         {
-            TerrainParams p = MakeParams(FractalMode.Multifractal);
+            TerrainParams p = MakeParams();
             float[,] heights = HeightmapGenerator.Generate(p, false);
             MeshData serial = MeshDataBuilder.Build(heights, p, false);
             MeshData parallel = MeshDataBuilder.Build(heights, p, true);
